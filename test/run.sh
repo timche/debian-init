@@ -25,9 +25,13 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
+# Third argument for the container that provisions its own account, which is
+# named by provision.sh rather than by this script.
 run_in_container() {
-  docker exec -u "$user" -e USER="$user" -e HOME="/home/$user" \
-    -e DEBIAN_FRONTEND=noninteractive "$1" bash "/home/$user/debian-init/$2"
+  local as="${3:-$user}"
+
+  docker exec -u "$as" -e USER="$as" -e HOME="/home/$as" \
+    -e DEBIAN_FRONTEND=noninteractive "$1" bash "/home/$as/debian-init/$2"
 }
 
 start_container() {
@@ -216,6 +220,12 @@ for image in "${images[@]}"; do
   # root, where the user setup.sh needs does not exist yet. A key is handed in
   # the way a headless run would, so hardening happens on the way through. No
   # argument, so this is the plain Debian box and not the Claude one.
+  #
+  # DEBIAN_INIT_USER is left unset here, unlike the stage above: with no
+  # terminal to ask at, provision.sh falls back to the name it documents, and
+  # the account it settles on is the assertion. Between the two stages the suite
+  # covers both the knob and the default, and neither account is named claude —
+  # which is the repo's rule about the name, tested rather than claimed.
   echo "--- provision.sh"
   provision_container="$container-provision"
   start_container "$provision_container" "$image"
@@ -242,13 +252,22 @@ for image in "${images[@]}"; do
     echo "  ok    provision.sh refuses an argument it does not know"
   fi
 
+  provisioned_user=debian
+
   if docker exec \
     -e DEBIAN_FRONTEND=noninteractive \
-    -e DEBIAN_INIT_USER="$user" \
     -e DEBIAN_INIT_REPO=/repo \
     -e SSH_PUBLIC_KEYS="$public_key" \
     "$provision_container" bash /repo/provision.sh >>"$log" 2>&1; then
-    run_in_container "$provision_container" test/assert.sh || stage_failed=1
+    if docker exec "$provision_container" id -u "$provisioned_user" >/dev/null 2>&1; then
+      echo "  ok    provision.sh names the account itself when nothing else does"
+    else
+      echo "  FAIL  provision.sh names the account itself when nothing else does"
+      stage_failed=1
+    fi
+
+    run_in_container "$provision_container" test/assert.sh "$provisioned_user" ||
+      stage_failed=1
 
     # Two things only root can see: that sshd will parse what was installed,
     # and that the sudo grant provision.sh lends itself for the run is gone
@@ -280,7 +299,7 @@ for image in "${images[@]}"; do
     # The password is generated, so a run with nobody watching leaves a usable
     # sudo behind rather than the locked account useradd creates.
     if docker exec "$provision_container" \
-      bash -c "passwd -S $user | awk '{print \$2}' | grep -qx P"; then
+      bash -c "passwd -S $provisioned_user | awk '{print \$2}' | grep -qx P"; then
       echo "  ok    the user has a password"
     else
       echo "  FAIL  the user has a password"

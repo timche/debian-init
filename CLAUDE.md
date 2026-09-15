@@ -17,7 +17,8 @@ Commit and push to main directly, no branch and no PR. Standing permission, and 
 ## Rules
 
 - The generic half may not depend on the Claude half. `setup.sh` and everything it calls must leave a usable machine with no account anywhere, and must not name `claude.sh` or anything under `claude/`. Only `provision.sh` knows both exist.
-- Nothing may depend on the account being named `claude`: paths go through `$HOME` or `getent passwd`, and the sshd drop-in's `__USER__` is substituted at install time. (`claude-dotfiles` does assume that name. This repo does not.)
+- Nothing may depend on the account being named `claude`: paths go through `$HOME` or `getent passwd`, and the sshd drop-in's `__USER__` is substituted at install time. (`claude-dotfiles` does assume that name. This repo does not.) `provision.sh` asks for the name, falling back to `debian`; the `claude` argument answers it as `claude` without asking, and `DEBIAN_INIT_USER` overrides both. That one line is the only place the name is decided.
+- Prompts in `provision.sh` read from `/dev/tty`, not stdin: under the documented curl install stdin is the pipe feeding the script, so a prompt on it is one nobody can answer.
 - `$HOME/debian-init`, the `DEBIAN_INIT_*` knobs and the sudoers drop-in are named for the generic half even though the VM this provisions is usually the Claude one. The exception is the signing key at `~/.ssh/claude`, which is Claude-side and whose path `claude-dotfiles`' `.gitconfig` points `user.signingkey` at — moving it here means moving it there too.
 - Nothing personal ships from here. `assert.sh` fails if a `home/` or `.claude` path appears.
 - The clone is disposable: nothing symlinks out of it, and the only files read from it are the two under `system/` — the sshd drop-in and docker's `daemon.json`. Keep it that way.

@@ -11,9 +11,10 @@
 # The first leaves a plain Debian box; the second puts Claude Code on top of
 # it.
 #
-# It creates that account, gives it the keys root is already reachable with,
-# and hands everything else to setup.sh running as it — then to claude.sh, if
-# that is what was asked for. Nothing here duplicates either of them: this is
+# It asks what the account should be called, creates it, gives it the keys root
+# is already reachable with, and hands everything else to setup.sh running as it
+# — then to claude.sh, if that is what was asked for. The overlay does not ask:
+# claude-dotfiles hardcodes the name, so a Claude run is always `claude`. Nothing here duplicates either of them: this is
 # the part that cannot be done from inside the account it is creating, which is
 # why it is short and setup.sh is not.
 #
@@ -24,8 +25,12 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-user="${DEBIAN_INIT_USER:-claude}"
 repo_url="${DEBIAN_INIT_REPO:-https://github.com/timche/debian-init.git}"
+
+# Asked for below unless the environment or the overlay settles it. The name a
+# provider's own Debian image uses, so it is the least surprising thing to land
+# on when nobody answers.
+default_user=debian
 
 # Extra keys to authorize, one per line, for runs with nobody at the keyboard.
 extra_keys="${SSH_PUBLIC_KEYS:-}"
@@ -58,6 +63,57 @@ fi
 distro="$(. /etc/os-release && echo "$ID")"
 if [ "$distro" != debian ]; then
   echo "unsupported distribution: $distro (expected debian)" >&2
+  exit 1
+fi
+
+# The account
+
+# Under the documented curl install stdin is the pipe feeding this script, so a
+# prompt on it would never be seen and an answer never typed. The terminal
+# itself is the one to ask at, when there is one.
+if (exec </dev/tty) 2>/dev/null; then
+  prompt=/dev/tty
+elif [ -t 0 ]; then
+  prompt=/dev/stdin
+else
+  prompt=""
+fi
+
+# useradd's own rule, near enough: what sshd, sudo and every path built from
+# $HOME will accept without argument.
+usable_name() {
+  [[ "$1" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] && [ "$1" != root ]
+}
+
+user="${DEBIAN_INIT_USER:-}"
+
+# claude-dotfiles hardcodes the name, so the overlay has only one answer and
+# asking would be a question with a wrong answer available.
+if [ -z "$user" ] && [ "$overlay" = true ]; then
+  user=claude
+fi
+
+if [ -z "$user" ] && [ -n "$prompt" ]; then
+  echo
+  echo "The account to create and hand the machine to. It gets sudo, docker and"
+  echo "the keys root is reachable with."
+  echo
+
+  while :; do
+    read -r -p "account [$default_user]> " user <"$prompt" || user=""
+    user="${user:-$default_user}"
+
+    usable_name "$user" && break
+
+    echo "  not a usable account name; lowercase, starting with a letter." >&2
+    user=""
+  done
+fi
+
+user="${user:-$default_user}"
+
+if ! usable_name "$user"; then
+  echo "unusable account name: $user" >&2
   exit 1
 fi
 
@@ -107,9 +163,10 @@ set_password() {
 
 if [ "$(passwd -S "$user" | awk '{print $2}')" != P ]; then
   set_password
-elif [ -t 0 ]; then
+elif [ -n "$prompt" ]; then
   echo
-  read -r -p "$user already has a password. Replace it with a generated one? [y/N] " answer
+  read -r -p "$user already has a password. Replace it with a generated one? [y/N] " \
+    answer <"$prompt"
   if [ "$answer" = y ] || [ "$answer" = Y ]; then
     set_password
   fi
@@ -139,14 +196,14 @@ collect_keys
 
 # Nothing to inherit and someone is watching, so ask rather than quietly leave
 # the account unreachable.
-if [ ! -s "$staged" ] && [ -t 0 ]; then
+if [ ! -s "$staged" ] && [ -n "$prompt" ]; then
   echo
   echo "No SSH public key found for $user, and root has none to inherit."
   echo "Paste one, e.g. 'ssh-ed25519 AAAA... tim@macbook'."
   echo "Enter on an empty line moves on."
 
   while :; do
-    read -r -p "key> " pasted || break
+    read -r -p "key> " pasted <"$prompt" || break
     [ -n "$pasted" ] || break
 
     printf '%s\n' "$pasted" >"$staged.one"

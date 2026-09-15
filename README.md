@@ -11,6 +11,8 @@ curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.s
 
 Both create the account, clone this repo and run `setup.sh` as that user. The second then runs `claude.sh` on top, and that is the whole of the difference.
 
+The plain run asks what the account should be called, defaulting to `debian`; the Claude one does not ask, because the private dotfiles hardcode `claude`. Either way `DEBIAN_INIT_USER` settles it without a prompt, which is what a run with nobody at the keyboard wants.
+
 ## The machine
 
 `setup.sh` installs docker and tailscale, switches unattended-upgrades on, asks for the public keys you connect with, brings the machine up on the tailnet advertising ssh, and then hardens sshd down to keys only, no root, one user. The tailnet is the second way in that lets the hardening be as strict as it is — paste a tailscale auth key when it asks, or set `TS_AUTHKEY` for a run with nobody at the keyboard. Make it a tagged key: a tagged node's key does not expire, and an untagged server drops off the tailnet when its own does. Nothing it leaves behind needs an account anywhere.
