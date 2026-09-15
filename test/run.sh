@@ -32,7 +32,8 @@ run_in_container() {
 
 start_container() {
   docker rm -f "$1" >/dev/null 2>&1
-  docker run -d --name "$1" -v "$repo:/repo:ro" "$2" sleep 7200 >/dev/null
+  docker run -d --name "$1" -v "$repo:/repo:ro" -v "$git_common:$git_common:ro" \
+    "$2" sleep 7200 >/dev/null
 }
 
 # provision.sh clones rather than copying, so its half of the suite sees the
@@ -40,6 +41,13 @@ start_container() {
 if [ -n "$(git -C "$repo" status --porcelain)" ]; then
   echo "note: uncommitted changes — the provision.sh stage tests HEAD without them"
 fi
+
+# In a worktree — which is where changes to this repo are made — .git is a file
+# naming an absolute gitdir rather than a directory, and provision.sh's clone
+# dies on a path the container knows nothing about. Mounting that directory at
+# the path it is named by is what makes the pointer resolve. In a plain checkout
+# it is $repo/.git and the mount is redundant.
+git_common="$(git -C "$repo" rev-parse --path-format=absolute --git-common-dir)"
 
 # A key for provision.sh to authorize. The private half goes out with the
 # temporary directory; nothing is meant to log in with it.
