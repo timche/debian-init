@@ -23,14 +23,16 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$repo/install.sh"
 
 # Before keys.sh, because that reads user.email out of the .gitconfig only the
-# dotfiles carry, and login.sh is what fetches them. Needs a terminal for the
-# browser flow.
+# dotfiles carry, and login.sh is what fetches them. Both need a terminal for
+# their browser flows.
 if [ -t 0 ]; then
   "$repo/login.sh"
+  "$repo/tailscale.sh"
 else
   echo
-  echo "Skipped login.sh — no terminal. Run $repo/login.sh to log in to GitHub"
-  echo "and tailscale, and to fetch the dotfiles."
+  echo "Skipped login.sh and tailscale.sh — no terminal. Run $repo/login.sh to"
+  echo "log in to GitHub and Claude Code and fetch the dotfiles, and"
+  echo "$repo/tailscale.sh to put the machine on the tailnet."
 fi
 
 keys_failed=0
@@ -55,16 +57,9 @@ echo
 # the dotfiles and the Claude Code login: the account is still on bash with
 # nothing but Debian's rc.
 if ! gh auth status >/dev/null 2>&1; then
-  echo "  - $repo/login.sh — GitHub, tailscale and Claude Code, and the rerun"
-  echo "    that fetches the dotfiles in between."
+  echo "  - $repo/login.sh — GitHub and Claude Code, and the rerun that fetches"
+  echo "    the dotfiles in between."
 else
-  # Separate ifs rather than a cascade: tailscale and the Claude Code login
-  # are two browser flows that fail on their own, and neither says anything
-  # about the other.
-  if ! tailscale status >/dev/null 2>&1; then
-    echo "  - sudo tailscale up — $repo/login.sh tried and did not get there."
-  fi
-
   # claude arrives with the dotfiles, in ~/.local/bin, which this shell has no
   # reason to have on PATH.
   export PATH="$HOME/.local/bin:$PATH"
@@ -76,13 +71,19 @@ else
   fi
 fi
 
+# Its own if rather than part of the cascade above: tailscale is a browser flow
+# that fails on its own, and the GitHub login says nothing about it.
+if ! tailscale status >/dev/null 2>&1; then
+  echo "  - sudo tailscale up — $repo/tailscale.sh tried and did not get there."
+fi
+
 cat <<'EOF'
   - Log out and back in so the docker group and the zsh login shell take hold.
 EOF
 
-# login.sh advertises tailscale ssh, and that is as far as a machine can take
-# it: who may use it is tailnet policy, and tailscaled answers those sessions
-# itself, so nothing in the sshd drop-in applies to them.
+# tailscale.sh advertises tailscale ssh, and that is as far as a machine can
+# take it: who may use it is tailnet policy, and tailscaled answers those
+# sessions itself, so nothing in the sshd drop-in applies to them.
 if tailscale status >/dev/null 2>&1; then
   cat <<'EOF'
   - Add an ssh rule for this machine in the tailscale admin console. It
