@@ -5,7 +5,7 @@
 # claude-dotfiles, so all this script does is get it onto the machine and run
 # its installer.
 #
-# That needs an authenticated gh, which a fresh VM does not have when setup.sh
+# That needs an authenticated gh, which a fresh VM does not have when claude.sh
 # first reaches this. So it says what is missing and returns, and login.sh runs
 # it again once there is a token. This is also the script to rerun by hand
 # after one expires.
@@ -38,6 +38,6 @@ if [ -x "$dotfiles/install.sh" ]; then
   "$dotfiles/install.sh"
 fi
 
-# claude/signing-key.sh is what pastes the key in; registering it needs the gh
-# that only exists by this point.
-"$repo/claude/register-signing-key.sh"
+# signing-key.sh is what pastes the key in; registering it needs the gh that
+# only exists by this point.
+"$repo/register-signing-key.sh"

@@ -20,31 +20,24 @@ fi
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 "$repo/bootstrap-system.sh"
-"$repo/install.sh"
-
-# Before keys.sh, because that reads user.email out of the .gitconfig only the
-# dotfiles carry, and login.sh is what fetches them. Both need a terminal for
-# their browser flows.
-if [ -t 0 ]; then
-  "$repo/login.sh"
-  "$repo/tailscale.sh"
-else
-  echo
-  echo "Skipped login.sh and tailscale.sh — no terminal. Run $repo/login.sh to"
-  echo "log in to GitHub and Claude Code and fetch the dotfiles, and"
-  echo "$repo/tailscale.sh to put the machine on the tailnet."
-fi
 
 keys_failed=0
 
-# Both prompt for a paste, so there has to be a terminal to prompt at.
+# Prompts for a paste, so there has to be a terminal to prompt at.
 if [ -t 0 ]; then
   "$repo/keys.sh" || keys_failed=1
-  "$repo/claude/signing-key.sh" || keys_failed=1
 else
   echo
-  echo "Skipped keys.sh — no terminal. Run $repo/keys.sh to install the SSH"
-  echo "keys, and $repo/claude/signing-key.sh for the commit-signing one."
+  echo "Skipped keys.sh — no terminal. Run $repo/keys.sh to install the SSH keys."
+fi
+
+# Needs a terminal for the browser flow.
+if [ -t 0 ]; then
+  "$repo/tailscale.sh"
+else
+  echo
+  echo "Skipped tailscale.sh — no terminal. Run $repo/tailscale.sh to put the"
+  echo "machine on the tailnet."
 fi
 
 # Last, because it is the step that turns password logins off. It skips itself
@@ -55,32 +48,12 @@ echo
 echo "Done. What is left:"
 echo
 
-# Still not logged in means login.sh was skipped or did not finish, and with it
-# the dotfiles and the Claude Code login: the account is still on bash with
-# nothing but Debian's rc.
-if ! gh auth status >/dev/null 2>&1; then
-  echo "  - $repo/login.sh — GitHub and Claude Code, and the rerun that fetches"
-  echo "    the dotfiles in between."
-else
-  # claude arrives with the dotfiles, in ~/.local/bin, which this shell has no
-  # reason to have on PATH.
-  export PATH="$HOME/.local/bin:$PATH"
-
-  if ! command -v claude >/dev/null 2>&1; then
-    echo "  - $repo/install.sh — it did not get as far as installing claude."
-  elif ! claude auth status >/dev/null 2>&1; then
-    echo "  - claude auth login — $repo/login.sh tried and did not get there."
-  fi
-fi
-
-# Its own if rather than part of the cascade above: tailscale is a browser flow
-# that fails on its own, and the GitHub login says nothing about it.
 if ! tailscale status >/dev/null 2>&1; then
   echo "  - sudo tailscale up — $repo/tailscale.sh tried and did not get there."
 fi
 
 cat <<'EOF'
-  - Log out and back in so the docker group and the zsh login shell take hold.
+  - Log out and back in so the docker group takes hold.
 EOF
 
 # tailscale.sh advertises tailscale ssh, and that is as far as a machine can
