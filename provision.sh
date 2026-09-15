@@ -206,21 +206,29 @@ visudo -cf "$sudoers_drop_in" >/dev/null
 # terminal along — the key prompts and the browser flows have nowhere to go
 # otherwise.
 #
-# su - clears the environment, and a tailscale auth key handed to a headless
-# run has to survive that. -w keeps it out of the command line, where every
-# user on the box could read it out of /proc for the length of the run.
+# su - clears the environment, so every knob the halves read has to be named
+# here or it silently does nothing when the run starts from this end. -w rather
+# than an assignment in the command, which would put a tailscale auth key in the
+# command line for every user on the box to read out of /proc.
+knobs=TS_AUTHKEY,FORCE_HARDEN,CLAUDE_DOTFILES_REPO,CLAUDE_DOTFILES_DIR
+
 run_as_user() {
   if (exec </dev/tty) 2>/dev/null; then
-    su -w TS_AUTHKEY - "$user" -s /bin/bash -c "$1" </dev/tty
+    su -w "$knobs" - "$user" -s /bin/bash -c "$1" </dev/tty
   else
-    su -w TS_AUTHKEY - "$user" -s /bin/bash -c "$1"
+    su -w "$knobs" - "$user" -s /bin/bash -c "$1"
   fi
 }
 
-run_as_user "$target/setup.sh"
+# A fumbled paste is enough to make either half exit non-zero, and under set -e
+# that would take the closing block with it — including the generated password,
+# which nothing else has a copy of. Carry the status to the end instead.
+run_failed=0
+
+run_as_user "$target/setup.sh" || run_failed=1
 
 if [ "$overlay" = true ]; then
-  run_as_user "$target/claude.sh"
+  run_as_user "$target/claude.sh" || run_failed=1
 fi
 
 # claude comes with the overlay, so asking a generic box for its version only
@@ -254,3 +262,13 @@ else has a copy:
     $generated_password
 EOF
 fi
+
+# After the password, so a half that failed is the last thing said and the one
+# thing worth keeping is still above it.
+if [ "$run_failed" -ne 0 ]; then
+  echo
+  echo "One of the halves did not finish — read back for which, and rerun it" >&2
+  echo "from $target." >&2
+fi
+
+exit "$run_failed"
