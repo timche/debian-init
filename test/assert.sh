@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Assertions against a machine that setup.sh has just finished with. Runs
-# inside the test container as the unprivileged user; see run.sh.
+# Assertions against a machine that setup.sh has just finished with — the
+# generic half only, with assert-claude.sh covering the overlay. Runs inside
+# the test container as the unprivileged user; see run.sh.
 #
 # To add a case, add a check line: a description and a shell snippet that
 # exits non-zero when the expectation is not met.
@@ -27,9 +28,9 @@ check() {
 check "no personal config in this repo" \
   '! find "$HOME/debian-init" \( -name .claude -o -name home \) -not -path "*/.git/*" | grep -q .'
 
-# zsh is installed but not switched to: claude-dotfiles owns that, because it
-# owns the .zshrc without which the next login hits zsh-newuser-install.
-check "zsh installed"             'command -v zsh'
+# Nothing in the generic half has an opinion about the shell: the account keeps
+# whatever provision.sh created it with, and no rc file of this repo's comes
+# with it.
 check "login shell is left alone" 'getent passwd "$USER" | cut -d: -f7 | grep -qv zsh'
 check "no rc file was planted"    '[ ! -e "$HOME/.zshrc" ]'
 check "the stock .bashrc is untouched" \
@@ -39,11 +40,8 @@ check "the stock .bashrc is untouched" \
 check "user is in docker group" 'id -nG "$USER" | tr " " "\n" | grep -qx docker'
 check "user is in sudo group"   'id -nG "$USER" | tr " " "\n" | grep -qx sudo'
 check "docker installed"        'command -v docker'
-check "gh installed"            'command -v gh'
 check "tailscale installed"     'command -v tailscale'
 check "btop installed"          'command -v btop'
-check "unzip installed"         'command -v unzip'
-check "jq installed"            'command -v jq'
 check "ssh-keygen installed"    'command -v ssh-keygen'
 check "sshd installed"          '[ -x /usr/sbin/sshd ]'
 check "daemon.json installed"   'grep -q 127.0.0.1 /etc/docker/daemon.json'
@@ -82,16 +80,10 @@ fi
 check "keys.sh exits without a terminal" \
   '"$HOME/debian-init/keys.sh" < /dev/null'
 
-# Same again for login.sh, which drives two browser flows and would sit on the
-# gh prompt forever. timeout, because the failure mode is a hang and not an
-# exit status.
-check "login.sh exits without a terminal" \
-  'timeout 30 "$HOME/debian-init/login.sh" < /dev/null'
-
-# gh is installed here but never logged in, which is the state every fresh VM
-# is in. Registering the signing key has to skip out of that, not fail the run.
-check "register-signing-key.sh skips when gh cannot help" \
-  '"$HOME/debian-init/register-signing-key.sh"'
+# Same again for tailscale.sh, which drives a browser flow and would sit on it
+# forever. timeout, because the failure mode is a hang and not an exit status.
+check "tailscale.sh exits without a terminal" \
+  'timeout 30 "$HOME/debian-init/tailscale.sh" < /dev/null'
 
 if [ "$failures" -gt 0 ]; then
   echo "  $failures check(s) failed"

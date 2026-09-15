@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Run setup.sh end to end in a throwaway container per image, then assert the
-# result. Defaults to the release the repo claims to support.
+# Run both halves end to end in a throwaway container per image, then assert
+# the result. Defaults to the release the repo claims to support.
 #
 #   test/run.sh                  # debian:13
 #   test/run.sh debian:12        # another release
@@ -92,28 +92,56 @@ for image in "${images[@]}"; do
   if [ "$stage_failed" -eq 0 ]; then
     run_in_container "$container" test/assert.sh || stage_failed=1
 
+    # The overlay, on top of the box setup.sh just built. No gh is ever logged
+    # in here, so it gets as far as its packages and stops — and has to do that
+    # with an exit status of zero.
+    echo "--- claude.sh"
+    if ! run_in_container "$container" claude.sh >>"$log" 2>&1; then
+      echo "  FAIL  claude.sh exited non-zero"
+      stage_failed=1
+    else
+      run_in_container "$container" test/assert-claude.sh || stage_failed=1
+    fi
+
     # install.sh is documented as safe to re-run, so prove it.
-    echo "--- install.sh again"
-    if run_in_container "$container" install.sh >>"$log" 2>&1; then
-      run_in_container "$container" test/assert.sh || stage_failed=1
+    echo "--- claude/install.sh again"
+    if run_in_container "$container" claude/install.sh >>"$log" 2>&1; then
+      run_in_container "$container" test/assert-claude.sh || stage_failed=1
     else
       echo "  FAIL  install.sh is not idempotent"
       stage_failed=1
     fi
 
     # setup.sh skipped keys.sh for want of a terminal, so drive it under a pty
-    # from bsdutils' script(1) — Essential, so it is on every Debian. A throwaway
-    # key stands in for the paste, and the empty line after it ends the
-    # authorized_keys list. Signing a commit and verifying it is the assertion:
-    # it exercises the derived .pub and the trust list keys.sh writes, and fails
-    # if the paste handling is wrong.
+    # from bsdutils' script(1) — Essential, so it is on every Debian. A
+    # throwaway key stands in for the paste, and the empty line after it ends
+    # the list.
+    echo "--- keys.sh"
+    if docker exec -u "$user" -e HOME="/home/$user" "$container" bash -c "
+      set -e
+      ssh-keygen -q -t ed25519 -N '' -C authorized -f /tmp/authorized
+      { cat /tmp/authorized.pub; printf '\n'; } |
+        script -qec /home/$user/debian-init/keys.sh /dev/null
+      grep -qFf /tmp/authorized.pub /home/$user/.ssh/authorized_keys
+    " >>"$log" 2>&1; then
+      echo "  ok    keys.sh installs a pasted authorized key"
+    else
+      echo "  FAIL  keys.sh installs a pasted authorized key"
+      stage_failed=1
+    fi
+
+    # claude.sh skipped signing-key.sh for the same reason, so the same again.
+    # Signing a commit and verifying it is the assertion: it exercises the
+    # derived .pub and the trust list signing-key.sh writes, and fails if the
+    # paste handling is wrong.
     #
     # The signing config is written here rather than coming from a linked
     # .gitconfig, because that file lives in claude-dotfiles now and no
-    # container ever gets that far. It has to be in place before keys.sh runs:
-    # user.email is what keys.sh writes into allowed_signers as the principal,
-    # and a signature verifies against nothing if the two disagree.
-    echo "--- keys.sh"
+    # container ever gets that far. It has to be in place before
+    # signing-key.sh runs: user.email is what it writes into allowed_signers as
+    # the principal, and a signature verifies against nothing if the two
+    # disagree.
+    echo "--- claude/signing-key.sh"
     if docker exec -u "$user" -e HOME="/home/$user" "$container" bash -c "
       set -e
       git config --global user.name tester
@@ -123,8 +151,8 @@ for image in "${images[@]}"; do
       git config --global gpg.ssh.allowedSignersFile '~/.ssh/allowed_signers'
       git config --global commit.gpgsign true
       ssh-keygen -q -t ed25519 -N '' -C pasted -f /tmp/pasted
-      { cat /tmp/pasted; printf '\n'; } |
-        script -qec /home/$user/debian-init/keys.sh /dev/null
+      script -qec /home/$user/debian-init/claude/signing-key.sh /dev/null \
+        </tmp/pasted
       test ! -L /home/$user/.ssh/allowed_signers
       cmp -s /tmp/pasted /home/$user/.ssh/claude
       rm -rf /tmp/signing && mkdir /tmp/signing && cd /tmp/signing
@@ -132,9 +160,9 @@ for image in "${images[@]}"; do
       git commit --allow-empty -q -m signed
       git log --format='%G?' -1 | grep -qx G
     " >>"$log" 2>&1; then
-      echo "  ok    keys.sh installs a pasted signing key that verifies"
+      echo "  ok    signing-key.sh installs a pasted key that verifies"
     else
-      echo "  FAIL  keys.sh installs a pasted signing key that verifies"
+      echo "  FAIL  signing-key.sh installs a pasted key that verifies"
       stage_failed=1
     fi
 
@@ -176,9 +204,10 @@ for image in "${images[@]}"; do
     fi
   fi
 
-  # The other entry point, from the other end: a bare image with nothing but
+  # The root entry point, from the other end: a bare image with nothing but
   # root, where the user setup.sh needs does not exist yet. A key is handed in
-  # the way a headless run would, so hardening happens on the way through.
+  # the way a headless run would, so hardening happens on the way through. No
+  # argument, so this is the plain Debian box and not the Claude one.
   echo "--- provision.sh"
   provision_container="$container-provision"
   start_container "$provision_container" "$image"
@@ -216,6 +245,15 @@ for image in "${images[@]}"; do
       echo "  ok    the temporary sudo grant was withdrawn"
     else
       echo "  FAIL  the temporary sudo grant was withdrawn"
+      stage_failed=1
+    fi
+
+    # Nobody asked for the overlay, so none of it may have happened. gh is the
+    # cheapest thing to look for: the generic half has no reason to install it.
+    if docker exec "$provision_container" bash -c '! command -v gh'; then
+      echo "  ok    the claude half stayed out of a plain run"
+    else
+      echo "  FAIL  the claude half stayed out of a plain run"
       stage_failed=1
     fi
 
