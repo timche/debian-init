@@ -13,7 +13,7 @@ Both create the account, clone this repo and run `setup.sh` as that user. The se
 
 ## The machine
 
-`setup.sh` installs docker and tailscale, switches unattended-upgrades on, asks for the public keys you connect with, and hardens sshd down to keys only, no root, one user. It brings the machine up on the tailnet advertising ssh, which is the second way in that lets the hardening be as strict as it is — paste a tailscale auth key when it asks, or set `TS_AUTHKEY` for a run with nobody at the keyboard. Make it a tagged key: a tagged node's key does not expire, and an untagged server drops off the tailnet when its own does. Nothing it leaves behind needs an account anywhere.
+`setup.sh` installs docker and tailscale, switches unattended-upgrades on, asks for the public keys you connect with, brings the machine up on the tailnet advertising ssh, and then hardens sshd down to keys only, no root, one user. The tailnet is the second way in that lets the hardening be as strict as it is — paste a tailscale auth key when it asks, or set `TS_AUTHKEY` for a run with nobody at the keyboard. Make it a tagged key: a tagged node's key does not expire, and an untagged server drops off the tailnet when its own does. Nothing it leaves behind needs an account anywhere.
 
 ## The Claude Code overlay
 

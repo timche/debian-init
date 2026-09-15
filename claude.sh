@@ -108,4 +108,10 @@ else
   fi
 fi
 
+# The dotfiles installer is what makes zsh the login shell, so this line belongs
+# to the overlay rather than to setup.sh, which no longer installs zsh at all.
+if [ "$(getent passwd "$USER" | cut -d: -f7)" != "$SHELL" ]; then
+  echo "  - Log out and back in for the login shell the dotfiles set."
+fi
+
 exit "$signing_failed"

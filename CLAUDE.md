@@ -20,7 +20,7 @@ Commit and push to main directly, no branch and no PR. Standing permission, and 
 - Nothing may depend on the account being named `claude`: paths go through `$HOME` or `getent passwd`, and the sshd drop-in's `__USER__` is substituted at install time. (`claude-dotfiles` does assume that name. This repo does not.)
 - `$HOME/debian-init`, the `DEBIAN_INIT_*` knobs and the sudoers drop-in are named for the generic half even though the VM this provisions is usually the Claude one. The exception is the signing key at `~/.ssh/claude`, which is Claude-side and whose path `claude-dotfiles`' `.gitconfig` points `user.signingkey` at — moving it here means moving it there too.
 - Nothing personal ships from here. `assert.sh` fails if a `home/` or `.claude` path appears.
-- The clone is disposable: nothing symlinks out of it, and only `harden-ssh.sh` still reads a file from it. Keep it that way.
+- The clone is disposable: nothing symlinks out of it, and the only files read from it are the two under `system/` — the sshd drop-in and docker's `daemon.json`. Keep it that way.
 - Debian only, refused up front.
 
 ## Testing

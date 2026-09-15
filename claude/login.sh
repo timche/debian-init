@@ -3,8 +3,8 @@
 # The account logins that need a browser: GitHub and Claude Code. Split out of
 # claude.sh because both want a person at the keyboard, and kept a script of
 # its own because it is what you rerun when one was skipped or has since
-# expired. tailscale.sh is the third browser flow, and it is generic — a
-# tailnet is the machine's business, not an account's.
+# expired. The tailnet is the machine's business rather than an account's, so
+# tailscale.sh stays in the generic half.
 #
 # Neither of them is fatal. By the time this runs the machine is built; what is
 # missing is an account on it, and that can be sorted out later.

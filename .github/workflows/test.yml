@@ -14,5 +14,5 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Run setup.sh in a debian:13 container
+      - name: Run the suite in a debian:13 container
         run: test/run.sh debian:13
