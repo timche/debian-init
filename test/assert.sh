@@ -25,7 +25,7 @@ check() {
 # the runtimes and ~/.claude all come from the private one. A stray dot
 # directory here would be a leak.
 check "no personal config in this repo" \
-  '! find "$HOME/claude-sandbox" \( -name .claude -o -name home \) -not -path "*/.git/*" | grep -q .'
+  '! find "$HOME/debian-init" \( -name .claude -o -name home \) -not -path "*/.git/*" | grep -q .'
 
 # zsh is installed but not switched to: claude-dotfiles owns that, because it
 # owns the .zshrc without which the next login hits zsh-newuser-install.
@@ -74,24 +74,24 @@ else
   check "no drop-in until there is a key to log in with" \
     '[ ! -f /etc/ssh/sshd_config.d/10-hardening.conf ]'
   check "harden-ssh.sh refuses rather than failing the run" \
-    '"$HOME/claude-sandbox/harden-ssh.sh"'
+    '"$HOME/debian-init/harden-ssh.sh"'
 fi
 
 # keys.sh prompts for a paste. If it ever stops bailing out without a terminal,
 # setup.sh blocks forever here instead of finishing.
 check "keys.sh exits without a terminal" \
-  '"$HOME/claude-sandbox/keys.sh" < /dev/null'
+  '"$HOME/debian-init/keys.sh" < /dev/null'
 
 # Same again for login.sh, which drives two browser flows and would sit on the
 # gh prompt forever. timeout, because the failure mode is a hang and not an
 # exit status.
 check "login.sh exits without a terminal" \
-  'timeout 30 "$HOME/claude-sandbox/login.sh" < /dev/null'
+  'timeout 30 "$HOME/debian-init/login.sh" < /dev/null'
 
 # gh is installed here but never logged in, which is the state every fresh VM
 # is in. Registering the signing key has to skip out of that, not fail the run.
 check "register-signing-key.sh skips when gh cannot help" \
-  '"$HOME/claude-sandbox/register-signing-key.sh"'
+  '"$HOME/debian-init/register-signing-key.sh"'
 
 if [ "$failures" -gt 0 ]; then
   echo "  $failures check(s) failed"

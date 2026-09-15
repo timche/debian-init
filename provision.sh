@@ -4,7 +4,7 @@
 # over — root over SSH, no unprivileged account yet — so the run has to start
 # as root whether or not the account already exists.
 #
-#   curl -fsSL https://raw.githubusercontent.com/zoidsh/claude-sandbox/main/provision.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.sh | bash
 #
 # It creates that account, gives it the keys root is already reachable with,
 # and hands everything else to setup.sh running as it. Nothing here duplicates
@@ -18,14 +18,14 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-user="${CLAUDE_SANDBOX_USER:-claude}"
-repo_url="${CLAUDE_SANDBOX_REPO:-https://github.com/zoidsh/claude-sandbox.git}"
+user="${DEBIAN_INIT_USER:-claude}"
+repo_url="${DEBIAN_INIT_REPO:-https://github.com/timche/debian-init.git}"
 
 # Extra keys to authorize, one per line, for runs with nobody at the keyboard.
 extra_keys="${SSH_PUBLIC_KEYS:-}"
 
 root_keys=/root/.ssh/authorized_keys
-sudoers_drop_in="/etc/sudoers.d/90-claude-sandbox-provision"
+sudoers_drop_in="/etc/sudoers.d/90-debian-init-provision"
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "provision.sh has to run as root — it creates the user, authorizes keys" >&2
@@ -155,7 +155,7 @@ fi
 
 # The repo
 
-target="${CLAUDE_SANDBOX_DIR:-$home/claude-sandbox}"
+target="${DEBIAN_INIT_DIR:-$home/debian-init}"
 
 if [ -d "$target/.git" ]; then
   sudo -u "$user" git -C "$target" pull --ff-only

@@ -27,7 +27,7 @@ fi
 
 run_in_container() {
   docker exec -u "$user" -e USER="$user" -e HOME="/home/$user" \
-    -e DEBIAN_FRONTEND=noninteractive "$1" bash "/home/$user/claude-sandbox/$2"
+    -e DEBIAN_FRONTEND=noninteractive "$1" bash "/home/$user/debian-init/$2"
 }
 
 start_container() {
@@ -51,7 +51,7 @@ public_key="$(cat "$keydir/key.pub")"
 failed=0
 
 for image in "${images[@]}"; do
-  container="claude-sandbox-test-$(echo "$image" | tr ':/.' '---')"
+  container="debian-init-test-$(echo "$image" | tr ':/.' '---')"
   log="$(mktemp)"
 
   echo "==> $image"
@@ -65,8 +65,8 @@ for image in "${images[@]}"; do
     apt-get install -y -qq sudo passwd adduser >/dev/null
     useradd -m -s /bin/bash -G sudo $user
     echo '$user ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/$user
-    cp -r /repo /home/$user/claude-sandbox
-    chown -R $user:$user /home/$user/claude-sandbox
+    cp -r /repo /home/$user/debian-init
+    chown -R $user:$user /home/$user/debian-init
   " >>"$log" 2>&1
 
   stage_failed=0
@@ -76,7 +76,7 @@ for image in "${images[@]}"; do
   # them through /root.
   echo "--- setup.sh as root"
   if docker exec -e DEBIAN_FRONTEND=noninteractive "$container" \
-    bash "/home/$user/claude-sandbox/setup.sh" >>"$log" 2>&1; then
+    bash "/home/$user/debian-init/setup.sh" >>"$log" 2>&1; then
     echo "  FAIL  setup.sh refuses to run as root"
     stage_failed=1
   else
@@ -119,14 +119,14 @@ for image in "${images[@]}"; do
       git config --global user.name tester
       git config --global user.email tester@example.com
       git config --global gpg.format ssh
-      git config --global user.signingkey '~/.ssh/claude-sandbox.pub'
+      git config --global user.signingkey '~/.ssh/claude.pub'
       git config --global gpg.ssh.allowedSignersFile '~/.ssh/allowed_signers'
       git config --global commit.gpgsign true
       ssh-keygen -q -t ed25519 -N '' -C pasted -f /tmp/pasted
       { cat /tmp/pasted; printf '\n'; } |
-        script -qec /home/$user/claude-sandbox/keys.sh /dev/null
+        script -qec /home/$user/debian-init/keys.sh /dev/null
       test ! -L /home/$user/.ssh/allowed_signers
-      cmp -s /tmp/pasted /home/$user/.ssh/claude-sandbox
+      cmp -s /tmp/pasted /home/$user/.ssh/claude
       rm -rf /tmp/signing && mkdir /tmp/signing && cd /tmp/signing
       git init -q .
       git commit --allow-empty -q -m signed
@@ -195,8 +195,8 @@ for image in "${images[@]}"; do
 
   if docker exec \
     -e DEBIAN_FRONTEND=noninteractive \
-    -e CLAUDE_SANDBOX_USER="$user" \
-    -e CLAUDE_SANDBOX_REPO=/repo \
+    -e DEBIAN_INIT_USER="$user" \
+    -e DEBIAN_INIT_REPO=/repo \
     -e SSH_PUBLIC_KEYS="$public_key" \
     "$provision_container" bash /repo/provision.sh >>"$log" 2>&1; then
     run_in_container "$provision_container" test/assert.sh || stage_failed=1
@@ -212,7 +212,7 @@ for image in "${images[@]}"; do
     fi
 
     if docker exec "$provision_container" \
-      test ! -f /etc/sudoers.d/90-claude-sandbox-provision; then
+      test ! -f /etc/sudoers.d/90-debian-init-provision; then
       echo "  ok    the temporary sudo grant was withdrawn"
     else
       echo "  FAIL  the temporary sudo grant was withdrawn"

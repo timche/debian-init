@@ -25,12 +25,12 @@ fi
 dotfiles="${CLAUDE_DOTFILES_DIR:-$HOME/claude-dotfiles}"
 
 # Nobody but the owner can clone it, so a failure here is a message rather than
-# the end of the run: the machine claude-sandbox built still works.
+# the end of the run: the machine debian-init built still works.
 if [ -d "$dotfiles/.git" ]; then
   git -C "$dotfiles" pull --ff-only ||
     echo "could not update $dotfiles — leaving it as it is" >&2
 else
-  gh repo clone "${CLAUDE_DOTFILES_REPO:-zoidsh/claude-dotfiles}" "$dotfiles" ||
+  gh repo clone "${CLAUDE_DOTFILES_REPO:-timche/claude-dotfiles}" "$dotfiles" ||
     echo "could not clone the dotfiles repo — the shell stays on bash" >&2
 fi
 
@@ -38,6 +38,6 @@ if [ -x "$dotfiles/install.sh" ]; then
   "$dotfiles/install.sh"
 fi
 
-# The signing key is claude-sandbox's business — keys.sh pastes it — but
+# The signing key is debian-init's business — keys.sh pastes it — but
 # registering it needs the gh that only exists by this point.
 "$repo/register-signing-key.sh"

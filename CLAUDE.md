@@ -40,6 +40,6 @@ repo is never reached here — that is covered by CI in `claude-dotfiles`.
 
 ## Environment knobs
 
-`CLAUDE_SANDBOX_USER`, `CLAUDE_SANDBOX_REPO`, `CLAUDE_SANDBOX_DIR`,
+`DEBIAN_INIT_USER`, `DEBIAN_INIT_REPO`, `DEBIAN_INIT_DIR`,
 `CLAUDE_DOTFILES_REPO`, `CLAUDE_DOTFILES_DIR`, `SSH_PUBLIC_KEYS` (headless key
 handoff to `provision.sh`), `FORCE_HARDEN`, `KEEP`.
