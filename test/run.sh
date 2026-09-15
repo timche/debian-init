@@ -230,6 +230,18 @@ for image in "${images[@]}"; do
     git config --system --add safe.directory '*'
   " >>"$log" 2>&1
 
+  # A typo must not read as a request for the plain box: the argument is the
+  # only thing standing between a machine someone wanted Claude Code on and one
+  # they have to provision again. Refused before root, sudoers or apt are
+  # touched, so it costs nothing to run here.
+  if docker exec "$provision_container" bash /repo/provision.sh bogus \
+    >>"$log" 2>&1; then
+    echo "  FAIL  provision.sh refuses an argument it does not know"
+    stage_failed=1
+  else
+    echo "  ok    provision.sh refuses an argument it does not know"
+  fi
+
   if docker exec \
     -e DEBIAN_FRONTEND=noninteractive \
     -e DEBIAN_INIT_USER="$user" \
