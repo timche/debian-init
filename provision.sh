@@ -1,15 +1,21 @@
 #!/bin/bash
 
-# The entry point, and the only one. A VM arrives the way a provider hands it
-# over — root over SSH, no unprivileged account yet — so the run has to start
-# as root whether or not the account already exists.
+# The entry point a bare VM has, and the only one that runs as root. A VM
+# arrives the way a provider hands it over — root over SSH, no unprivileged
+# account yet — so the run has to start as root whether or not the account
+# already exists.
 #
 #   curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.sh | bash -s claude
+#
+# The first leaves a plain Debian box; the second puts Claude Code on top of
+# it.
 #
 # It creates that account, gives it the keys root is already reachable with,
-# and hands everything else to setup.sh running as it. Nothing here duplicates
-# setup.sh: this is the part that cannot be done from inside the account it is
-# creating, which is why it is short and setup.sh is not.
+# and hands everything else to setup.sh running as it — then to claude.sh, if
+# that is what was asked for. Nothing here duplicates either of them: this is
+# the part that cannot be done from inside the account it is creating, which is
+# why it is short and setup.sh is not.
 #
 # Safe to re-run: an existing user is reused, and keys are merged rather than
 # replaced.
@@ -26,6 +32,22 @@ extra_keys="${SSH_PUBLIC_KEYS:-}"
 
 root_keys=/root/.ssh/authorized_keys
 sudoers_drop_in="/etc/sudoers.d/90-debian-init-provision"
+
+# The overlay is opt-in, and the argument is the whole of the interface to it.
+# Anything else is refused rather than ignored: a typo that quietly provisions
+# a machine without the half you asked for is worse than one that stops.
+overlay=false
+
+if [ "$#" -gt 0 ]; then
+  if [ "$#" -eq 1 ] && [ "$1" = claude ]; then
+    overlay=true
+  else
+    echo "usage: provision.sh [claude]" >&2
+    echo "'claude' asks for the Claude Code overlay on top of the machine;" >&2
+    echo "there is no other argument." >&2
+    exit 1
+  fi
+fi
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "provision.sh has to run as root — it creates the user, authorizes keys" >&2
@@ -164,8 +186,8 @@ fi
 
 # Hand over
 
-# setup.sh sudos its way through a long apt run as $user, and the password just
-# set would expire out of sudo's timestamp partway through. Lift the
+# Both halves sudo their way through a long apt run as $user, and the password
+# just set would expire out of sudo's timestamp partway through. Lift the
 # requirement for the length of this run only — the trap goes on first, so a
 # rejected sudoers file cannot leave a standing grant behind.
 trap 'rm -f "$staged" "$staged.one" "$sudoers_drop_in"' EXIT
@@ -177,15 +199,31 @@ chmod 0440 "$sudoers_drop_in"
 visudo -cf "$sudoers_drop_in" >/dev/null
 
 # A machine that has been through this once may have had its login shell
-# changed from under it, and a second run would hand setup.sh to a shell whose
-# rc files expect a terminal. -s keeps it bash.
+# changed from under it, and a second run would hand these to a shell whose rc
+# files expect a terminal. -s keeps it bash.
 #
 # stdin may also be the curl pipe feeding this script, so pass the real
-# terminal along — setup.sh's key prompts have nowhere to go otherwise.
-if (exec </dev/tty) 2>/dev/null; then
-  su - "$user" -s /bin/bash -c "$target/setup.sh" </dev/tty
-else
-  su - "$user" -s /bin/bash -c "$target/setup.sh"
+# terminal along — the key prompts and the browser flows have nowhere to go
+# otherwise.
+run_as_user() {
+  if (exec </dev/tty) 2>/dev/null; then
+    su - "$user" -s /bin/bash -c "$1" </dev/tty
+  else
+    su - "$user" -s /bin/bash -c "$1"
+  fi
+}
+
+run_as_user "$target/setup.sh"
+
+if [ "$overlay" = true ]; then
+  run_as_user "$target/claude.sh"
+fi
+
+# claude comes with the overlay, so asking a generic box for its version only
+# produces a command not found that reads as a failed provision.
+verify="sudo -v && docker ps"
+if [ "$overlay" = true ]; then
+  verify="$verify && claude --version"
 fi
 
 cat <<EOF
@@ -193,7 +231,7 @@ cat <<EOF
 Provisioned. Before closing this session, from a second terminal:
 
     ssh $user@<host>
-    sudo -v && docker ps && claude --version
+    $verify
 
 One more thing worth knowing: docker writes its own iptables rules and goes
 around a host firewall, so a firewall at the provider is the one that counts.
