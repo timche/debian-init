@@ -38,6 +38,6 @@ if [ -x "$dotfiles/install.sh" ]; then
   "$dotfiles/install.sh"
 fi
 
-# The signing key is debian-init's business — keys.sh pastes it — but
-# registering it needs the gh that only exists by this point.
-"$repo/register-signing-key.sh"
+# claude/signing-key.sh is what pastes the key in; registering it needs the gh
+# that only exists by this point.
+"$repo/claude/register-signing-key.sh"

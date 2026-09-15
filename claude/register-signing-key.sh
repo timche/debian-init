@@ -1,22 +1,23 @@
 #!/bin/bash
 
-# Put the public half of the signing key on the GitHub account. keys.sh trusts
-# the key on this machine; this is the other half, and the only part of it that
-# needs an account rather than a file.
+# Put the public half of the signing key on the GitHub account. signing-key.sh
+# trusts the key on this machine; this is the other half, and the only part of
+# it that needs an account rather than a file.
 #
 # Everything that stops it is a skip, not a failure: no key yet, no gh, gh not
 # logged in, or a token without the scope. On a fresh VM all of those are true
-# when setup.sh reaches this, and the run should carry on regardless — you come
-# back to it after 'gh auth login'.
+# when install.sh reaches this, and the run should carry on regardless — you
+# come back to it after 'gh auth login'.
 #
 # Safe to re-run: a key already on the account is left alone.
 
 set -euo pipefail
 
+repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 signing_key="${1:-$HOME/.ssh/claude.pub}"
 
 if [ ! -f "$signing_key" ]; then
-  echo "no signing key at $signing_key — run keys.sh first" >&2
+  echo "no signing key at $signing_key — run $repo/signing-key.sh first" >&2
   exit 0
 fi
 

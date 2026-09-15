@@ -200,8 +200,8 @@ around a host firewall, so a firewall at the provider is the one that counts.
 EOF
 
 # Last, so the one thing this run produced and cannot show again is still on
-# screen. The signing key was pasted in, not made here, so keys.sh printing it
-# once is enough.
+# screen. The signing key was pasted in, not made here, so signing-key.sh
+# printing it once is enough.
 
 if [ -n "$generated_password" ]; then
   cat <<EOF

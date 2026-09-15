@@ -37,12 +37,14 @@ fi
 
 keys_failed=0
 
-# Prompts for a paste, so there has to be a terminal to prompt at.
+# Both prompt for a paste, so there has to be a terminal to prompt at.
 if [ -t 0 ]; then
   "$repo/keys.sh" || keys_failed=1
+  "$repo/claude/signing-key.sh" || keys_failed=1
 else
   echo
-  echo "Skipped keys.sh — no terminal. Run $repo/keys.sh to install the SSH keys."
+  echo "Skipped keys.sh — no terminal. Run $repo/keys.sh to install the SSH"
+  echo "keys, and $repo/claude/signing-key.sh for the commit-signing one."
 fi
 
 # Last, because it is the step that turns password logins off. It skips itself
