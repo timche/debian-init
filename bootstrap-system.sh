@@ -21,14 +21,14 @@ if [ "$distro" != debian ]; then
   exit 1
 fi
 
-# unzip is what bun's installer extracts with, jq is what the settings.json
-# hooks parse with, and ssh-keygen out of openssh-client is what git signs
-# commits with — none of the three are obvious from their names.
+# openssh-client is the one that is not obvious from its name: ssh-keygen is
+# what keys.sh checks a pasted key with, and what harden-ssh.sh asks before it
+# turns password logins off.
 sudo apt-get update
 sudo apt-get upgrade -y
 sudo apt-get install -y \
-  btop ca-certificates curl git jq openssh-client openssh-server sudo \
-  unattended-upgrades unzip vim zsh zsh-syntax-highlighting
+  btop ca-certificates curl git openssh-client openssh-server sudo \
+  unattended-upgrades vim
 
 # Installing the package does not reliably imply it is switched on.
 sudo tee /etc/apt/apt.conf.d/20auto-upgrades >/dev/null <<'EOF'
@@ -37,7 +37,7 @@ APT::Periodic::Unattended-Upgrade "1";
 EOF
 
 # Third-party repositories. Docker and tailscale publish a tree per release,
-# so these are keyed on the codename; the github-cli one is not.
+# so both of these are keyed on the codename.
 
 sudo install -d -m 0755 /etc/apt/keyrings
 
@@ -52,19 +52,13 @@ Architectures: $architecture
 Signed-By: /etc/apt/keyrings/docker.asc
 EOF
 
-sudo curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-  -o /etc/apt/keyrings/githubcli-archive-keyring.gpg
-sudo chmod a+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
-echo "deb [arch=$architecture signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-  | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
-
 sudo curl -fsSL "https://pkgs.tailscale.com/stable/debian/$codename.noarmor.gpg" \
   -o /usr/share/keyrings/tailscale-archive-keyring.gpg
 sudo curl -fsSL "https://pkgs.tailscale.com/stable/debian/$codename.tailscale-keyring.list" \
   -o /etc/apt/sources.list.d/tailscale.list
 
 sudo apt-get update
-sudo apt-get install -y gh tailscale \
+sudo apt-get install -y tailscale \
   docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # System configuration
@@ -79,8 +73,3 @@ if [ -d /run/systemd/system ]; then
 fi
 
 sudo usermod -aG docker "$USER"
-
-# zsh is installed here but not switched to. Making it the login shell before
-# ~/.zshrc exists drops the next interactive login into zsh-newuser-install,
-# and that file comes from claude-dotfiles — so the shell and its config are
-# turned on together, by the installer that carries both.

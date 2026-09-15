@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# The per-user half of the run: everything from a working account onwards. See
-# README.md for the steps that stay manual.
+# The per-user half of the run, and the whole of the machine: packages, docker,
+# tailscale, the keys it is reachable with, and a hardened sshd. What it leaves
+# is a box that is worth having without an account on it anywhere.
 #
 # Not an entry point. provision.sh is, and it runs as root because a VM arrives
 # with nothing else — it creates the account and calls this as it. Rerunning

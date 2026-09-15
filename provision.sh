@@ -53,7 +53,6 @@ apt-get install -y ca-certificates curl git openssh-client sudo
 # User
 
 if ! id -u "$user" >/dev/null 2>&1; then
-  # bootstrap-system.sh switches this to zsh once zsh exists.
   useradd -m -s /bin/bash "$user"
   echo "created $user"
 fi
@@ -177,8 +176,9 @@ EOF
 chmod 0440 "$sudoers_drop_in"
 visudo -cf "$sudoers_drop_in" >/dev/null
 
-# bootstrap-system.sh makes zsh the login shell, so a second run would hand
-# setup.sh to a shell whose rc files expect a terminal. -s keeps it bash.
+# A machine that has been through this once may have had its login shell
+# changed from under it, and a second run would hand setup.sh to a shell whose
+# rc files expect a terminal. -s keeps it bash.
 #
 # stdin may also be the curl pipe feeding this script, so pass the real
 # terminal along — setup.sh's key prompts have nowhere to go otherwise.
