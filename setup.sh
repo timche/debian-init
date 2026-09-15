@@ -46,7 +46,8 @@ echo "Done. What is left:"
 echo
 
 if ! tailscale status >/dev/null 2>&1; then
-  echo "  - sudo tailscale up — $repo/tailscale.sh tried and did not get there."
+  echo "  - $repo/tailscale.sh — the machine is not on the tailnet, either"
+  echo "    because there was no auth key or because it did not take."
 fi
 
 cat <<'EOF'

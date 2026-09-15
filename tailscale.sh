@@ -27,6 +27,14 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # su, for a run with nobody watching.
 auth_key="${TS_AUTHKEY:-}"
 
+# Before the init check rather than after it, so that a run with nobody at the
+# keyboard is turned away by the reason that will still be true on a real VM.
+if [ -z "$auth_key" ] && [ ! -t 0 ]; then
+  echo "no TS_AUTHKEY and no terminal to ask at — skipping tailscale. Run" >&2
+  echo "$repo/tailscale.sh to put the machine on the tailnet." >&2
+  exit 0
+fi
+
 if [ ! -d /run/systemd/system ]; then
   echo "no init to run tailscaled under — skipping tailscale"
   exit 0
@@ -43,12 +51,6 @@ if tailscale status >/dev/null 2>&1; then
   exit 0
 fi
 
-if [ -z "$auth_key" ] && [ ! -t 0 ]; then
-  echo "no TS_AUTHKEY and no terminal to ask at — skipping tailscale. Run" >&2
-  echo "$repo/tailscale.sh to put the machine on the tailnet." >&2
-  exit 0
-fi
-
 if [ -z "$auth_key" ]; then
   cat <<'EOF'
 
@@ -60,7 +62,9 @@ Enter on an empty line falls back to the browser flow.
 EOF
 
   while :; do
-    read -r -p "auth key> " auth_key || break
+    # A ctrl-D after a pasted line leaves the line in auth_key and returns
+    # non-zero, so the check below has to run on the way out too.
+    read -r -p "auth key> " auth_key || true
     [ -n "$auth_key" ] || break
 
     # A half-selected paste otherwise comes back as a tailscale error that
@@ -68,6 +72,7 @@ EOF
     [[ "$auth_key" == tskey-* ]] && break
 
     echo "  that does not look like an auth key; they start with 'tskey-'." >&2
+    auth_key=""
   done
 fi
 
