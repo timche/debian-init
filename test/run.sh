@@ -142,6 +142,24 @@ for image in "${images[@]}"; do
       stage_failed=1
     fi
 
+    # A second run with a key already in place must not go back to the paste
+    # prompt: on a fresh VM provision.sh has just asked for one, and setup.sh
+    # reaching keys.sh straight after is what made that two asks for the same
+    # key. Enter alone takes the default, and the file has to come out of it
+    # unchanged.
+    echo "--- keys.sh again"
+    if docker exec -u "$user" -e HOME="/home/$user" "$container" bash -c "
+      set -e
+      cp /home/$user/.ssh/authorized_keys /tmp/before
+      printf '\n' | script -qec /home/$user/debian-init/keys.sh /dev/null
+      cmp -s /tmp/before /home/$user/.ssh/authorized_keys
+    " >>"$log" 2>&1; then
+      echo "  ok    keys.sh does not ask again for a key it already has"
+    else
+      echo "  FAIL  keys.sh does not ask again for a key it already has"
+      stage_failed=1
+    fi
+
     # claude.sh skipped signing-key.sh for the same reason, so the same again.
     # Signing a commit and verifying it is the assertion: it exercises the
     # derived .pub and the trust list signing-key.sh writes, and fails if the

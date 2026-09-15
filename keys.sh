@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Install the authorized_keys for the devices you connect from. provision.sh
-# inherits whatever root was already reachable with; this is where the rest are
-# pasted in, and where a VM that inherited nothing gets its first one.
+# inherits whatever root was already reachable with, and asks when there is
+# nothing to inherit; this is where the rest are pasted in, and the script to
+# rerun to add one later.
 #
 # Every pasted line is put through ssh-keygen before it lands, because
 # harden-ssh.sh reads this file as proof there is a way back in and turns
@@ -63,4 +64,25 @@ install_authorized_keys() {
   fi
 }
 
-install_authorized_keys
+# provision.sh has already asked by the time setup.sh reaches this, on the one
+# run where there was nothing for it to inherit — so asking again unprompted is
+# asking twice for the same paste. Run by hand it is still how a key is added,
+# which is what the question is for.
+have=0
+if [ -f "$authorized_keys" ]; then
+  have="$(ssh-keygen -l -f "$authorized_keys" 2>/dev/null | wc -l)" || have=0
+fi
+
+if [ "$have" -eq 0 ]; then
+  install_authorized_keys
+else
+  echo
+  echo "$have key(s) already authorized in $authorized_keys."
+  read -r -p "Add another? [y/N] " answer
+
+  if [ "$answer" = y ] || [ "$answer" = Y ]; then
+    install_authorized_keys
+  else
+    echo "keeping the $have already there"
+  fi
+fi
