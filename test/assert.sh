@@ -80,8 +80,9 @@ fi
 check "keys.sh exits without a terminal" \
   '"$HOME/debian-init/keys.sh" < /dev/null'
 
-# Same again for tailscale.sh, which drives a browser flow and would sit on it
-# forever. timeout, because the failure mode is a hang and not an exit status.
+# Same again for tailscale.sh: with no TS_AUTHKEY it asks for one, and would
+# sit on that prompt forever. timeout, because the failure mode is a hang and
+# not an exit status.
 check "tailscale.sh exits without a terminal" \
   'timeout 30 "$HOME/debian-init/tailscale.sh" < /dev/null'
 

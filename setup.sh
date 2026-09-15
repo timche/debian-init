@@ -32,14 +32,10 @@ else
   echo "Skipped keys.sh — no terminal. Run $repo/keys.sh to install the SSH keys."
 fi
 
-# Needs a terminal for the browser flow.
-if [ -t 0 ]; then
-  "$repo/tailscale.sh"
-else
-  echo
-  echo "Skipped tailscale.sh — no terminal. Run $repo/tailscale.sh to put the"
-  echo "machine on the tailnet."
-fi
+# Called either way: an auth key in TS_AUTHKEY is enough on its own, and
+# without one it is the script that decides whether there is a terminal to ask
+# at.
+"$repo/tailscale.sh"
 
 # Last, because it is the step that turns password logins off. It skips itself
 # when there is no authorized_keys yet, rather than locking you out.

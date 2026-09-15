@@ -205,11 +205,15 @@ visudo -cf "$sudoers_drop_in" >/dev/null
 # stdin may also be the curl pipe feeding this script, so pass the real
 # terminal along — the key prompts and the browser flows have nowhere to go
 # otherwise.
+#
+# su - clears the environment, and a tailscale auth key handed to a headless
+# run has to survive that. -w keeps it out of the command line, where every
+# user on the box could read it out of /proc for the length of the run.
 run_as_user() {
   if (exec </dev/tty) 2>/dev/null; then
-    su - "$user" -s /bin/bash -c "$1" </dev/tty
+    su -w TS_AUTHKEY - "$user" -s /bin/bash -c "$1" </dev/tty
   else
-    su - "$user" -s /bin/bash -c "$1"
+    su -w TS_AUTHKEY - "$user" -s /bin/bash -c "$1"
   fi
 }
 
