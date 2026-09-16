@@ -31,4 +31,4 @@ Commit and push to main directly, no branch and no PR. Standing permission, and 
 
 ## Environment knobs
 
-`DEBIAN_SETUP_USER`, `DEBIAN_SETUP_REPO`, `DEBIAN_SETUP_DIR`, `DEBIAN_SETUP_SKIP_MACHINE` (the account and the overlay without the machine, for a box somebody else built), `CLAUDE_DOTFILES_REPO`, `CLAUDE_DOTFILES_DIR`, `SSH_PUBLIC_KEYS` and `TS_AUTHKEY` (headless key handoff to `provision.sh`, which passes the tailscale one through `su -w`), `FORCE_HARDEN`, `KEEP`.
+`DEBIAN_SETUP_USER`, `DEBIAN_SETUP_REPO`, `DEBIAN_SETUP_DIR`, `DEBIAN_SETUP_SKIP_MACHINE` (the account and the overlay without the machine, for a box somebody else built), `CLAUDE_DOTFILES_REPO`, `CLAUDE_DOTFILES_DIR`, `DEBIAN_SETUP_KEEP_CLONE` (a run deletes the clone it made, since nothing on the machine points into it and a rerun curls this script again; this keeps it), `SSH_PUBLIC_KEYS` and `TS_AUTHKEY` (headless key handoff to `provision.sh`, which passes the tailscale one through `su -w`), `FORCE_HARDEN`, `KEEP`.

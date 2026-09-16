@@ -279,15 +279,26 @@ for image in "${images[@]}"; do
 
   provisioned_user=debian
 
+  # Keeps the clone because the assertions below run out of it — and in doing so
+  # covers the knob, the default being covered by the skipped stage further down.
   if docker exec \
     -e DEBIAN_FRONTEND=noninteractive \
     -e DEBIAN_SETUP_REPO=/repo \
+    -e DEBIAN_SETUP_KEEP_CLONE=1 \
     -e SSH_PUBLIC_KEYS="$public_key" \
     "$provision_container" bash /repo/provision.sh >>"$log" 2>&1; then
     if docker exec "$provision_container" id -u "$provisioned_user" >/dev/null 2>&1; then
       echo "  ok    provision.sh names the account itself when nothing else does"
     else
       echo "  FAIL  provision.sh names the account itself when nothing else does"
+      stage_failed=1
+    fi
+
+    if docker exec "$provision_container" \
+      test -d "/home/$provisioned_user/debian-setup/.git"; then
+      echo "  ok    DEBIAN_SETUP_KEEP_CLONE keeps the clone"
+    else
+      echo "  FAIL  DEBIAN_SETUP_KEEP_CLONE keeps the clone"
       stage_failed=1
     fi
 
@@ -389,6 +400,15 @@ for image in "${images[@]}"; do
       echo "  ok    machine.sh stayed out of a skipped run"
     else
       echo "  FAIL  machine.sh stayed out of a skipped run"
+      stage_failed=1
+    fi
+
+    # Nothing on the machine points into the clone, and a rerun curls the script
+    # again, so a run that made one takes it away.
+    if docker exec "$skip_container" test ! -e /tmp/debian-setup; then
+      echo "  ok    the clone this run made is gone again"
+    else
+      echo "  FAIL  the clone this run made is gone again"
       stage_failed=1
     fi
 

@@ -281,10 +281,15 @@ fi
 
 target="${DEBIAN_SETUP_DIR:-$home/debian-setup}"
 
+# Whether this run is what put the clone there decides whether this run may
+# take it away again at the end.
+cloned_here=false
+
 if [ -d "$target/.git" ]; then
   sudo -u "$user" git -C "$target" pull --ff-only
 else
   sudo -u "$user" git clone "$repo_url" "$target"
+  cloned_here=true
 fi
 
 # Hand over
@@ -339,6 +344,24 @@ fi
 
 if [ "$overlay" = true ]; then
   run_as_user "$target/claude.sh" || run_failed=1
+fi
+
+# Nothing on the machine points into the clone: every file either half installs
+# is a copy under /etc or $HOME. A rerun is another curl of this script, which
+# clones again at whatever main says by then — better than running whatever
+# version happened to be left on disk. So the clone goes, unless this run found
+# it already there, in which case it belongs to whoever put it there, or unless
+# this script is running from inside it, where bash is still reading lines from
+# a file the rm would take away.
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || true)"
+
+if [ "$cloned_here" = true ] && [ "${DEBIAN_SETUP_KEEP_CLONE:-}" != 1 ]; then
+  if [ -n "$script_dir" ] && [ "$script_dir" = "$target" ]; then
+    echo "keeping $target — this script is running from inside it"
+  else
+    rm -rf "$target"
+    echo "removed $target — rerun by curling provision.sh again"
+  fi
 fi
 
 # claude comes with the overlay, so asking a generic box for its version only

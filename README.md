@@ -9,7 +9,7 @@ curl -fsSL https://raw.githubusercontent.com/timche/debian-setup/main/provision.
 curl -fsSL https://raw.githubusercontent.com/timche/debian-setup/main/provision.sh | bash -s claude  # the same, plus Claude Code
 ```
 
-Both create the account, clone this repo and run `machine.sh` as that user. The second then runs `claude.sh` on top, and that is the whole of the difference.
+Both create the account, clone this repo and run `machine.sh` as that user. The second then runs `claude.sh` on top, and that is the whole of the difference. The clone is deleted afterwards: nothing on the machine points into it — every file either half installs is a copy — and a rerun is another curl of the same URL, which fetches whatever main says by then rather than whatever was left on disk. A checkout that was already there is left alone, and `DEBIAN_SETUP_KEEP_CLONE=1` keeps a fresh one.
 
 On a machine that is already built — docker, tailscale and an sshd hardened the way its owner wants them — the same entry point can create the account and go straight to the Claude half:
 
