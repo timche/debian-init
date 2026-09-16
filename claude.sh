@@ -49,14 +49,16 @@ echo "deb [arch=$architecture signed-by=/etc/apt/keyrings/githubcli-archive-keyr
 
 # unzip is what bun's installer extracts with and jq is what the settings.json
 # hooks parse and login.sh patches ~/.claude.json with — neither is obvious
-# from its name.
+# from its name. glow renders the markdown claude-dotfiles' preview-markdown
+# skill puts in front of the user; Debian ships the current release, and the
+# version is the same on every machine, so apt owns it rather than mise.
 #
 # zsh is installed but not switched to. Making it the login shell before
 # ~/.zshrc exists drops the next interactive login into zsh-newuser-install,
 # and that file comes from claude-dotfiles — so the shell and its config are
 # turned on together, by the installer that carries both.
 sudo apt-get update
-sudo apt-get install -y gh jq unzip zsh zsh-syntax-highlighting
+sudo apt-get install -y gh glow jq unzip zsh zsh-syntax-highlighting
 
 "$repo/claude/install.sh"
 
