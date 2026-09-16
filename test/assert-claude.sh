@@ -30,6 +30,7 @@ check() {
 check "gh installed"    'command -v gh'
 check "zsh installed"   'command -v zsh'
 check "unzip installed" 'command -v unzip'
+check "glow installed"  'command -v glow'
 check "jq installed"    'command -v jq'
 
 # zsh is installed but not switched to: claude-dotfiles owns that, because it
