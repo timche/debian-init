@@ -42,11 +42,11 @@ check "no rc file was planted"    '[ ! -e "$HOME/.zshrc" ]'
 # prompt. timeout on the one driving browser flows, because that failure mode
 # is a hang and not an exit status.
 check "login.sh exits without a terminal" \
-  'timeout 30 "$HOME/debian-init/claude/login.sh" < /dev/null'
+  'timeout 30 "$HOME/debian-setup/claude/login.sh" < /dev/null'
 check "signing-key.sh exits without a terminal" \
-  '"$HOME/debian-init/claude/signing-key.sh" < /dev/null'
+  '"$HOME/debian-setup/claude/signing-key.sh" < /dev/null'
 check "register-signing-key.sh skips when gh cannot help" \
-  '"$HOME/debian-init/claude/register-signing-key.sh"'
+  '"$HOME/debian-setup/claude/register-signing-key.sh"'
 
 if [ "$failures" -gt 0 ]; then
   echo "  $failures check(s) failed"

@@ -31,7 +31,7 @@ run_in_container() {
   local as="${3:-$user}"
 
   docker exec -u "$as" -e USER="$as" -e HOME="/home/$as" \
-    -e DEBIAN_FRONTEND=noninteractive "$1" bash "/home/$as/debian-init/$2"
+    -e DEBIAN_FRONTEND=noninteractive "$1" bash "/home/$as/debian-setup/$2"
 }
 
 start_container() {
@@ -68,7 +68,7 @@ root_public_key="$(cat "$keydir/root.pub")"
 failed=0
 
 for image in "${images[@]}"; do
-  container="debian-init-test-$(echo "$image" | tr ':/.' '---')"
+  container="debian-setup-test-$(echo "$image" | tr ':/.' '---')"
   log="$(mktemp)"
 
   echo "==> $image"
@@ -82,8 +82,8 @@ for image in "${images[@]}"; do
     apt-get install -y -qq sudo passwd adduser >/dev/null
     useradd -m -s /bin/bash -G sudo $user
     echo '$user ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/$user
-    cp -r /repo /home/$user/debian-init
-    chown -R $user:$user /home/$user/debian-init
+    cp -r /repo /home/$user/debian-setup
+    chown -R $user:$user /home/$user/debian-setup
   " >>"$log" 2>&1
 
   stage_failed=0
@@ -93,7 +93,7 @@ for image in "${images[@]}"; do
   # them through /root.
   echo "--- machine.sh as root"
   if docker exec -e DEBIAN_FRONTEND=noninteractive "$container" \
-    bash "/home/$user/debian-init/machine.sh" >>"$log" 2>&1; then
+    bash "/home/$user/debian-setup/machine.sh" >>"$log" 2>&1; then
     echo "  FAIL  machine.sh refuses to run as root"
     stage_failed=1
   else
@@ -138,7 +138,7 @@ for image in "${images[@]}"; do
       set -e
       ssh-keygen -q -t ed25519 -N '' -C authorized -f /tmp/authorized
       { cat /tmp/authorized.pub; printf '\n'; } |
-        script -qec /home/$user/debian-init/keys.sh /dev/null
+        script -qec /home/$user/debian-setup/keys.sh /dev/null
       grep -qFf /tmp/authorized.pub /home/$user/.ssh/authorized_keys
     " >>"$log" 2>&1; then
       echo "  ok    keys.sh installs a pasted authorized key"
@@ -156,7 +156,7 @@ for image in "${images[@]}"; do
     if docker exec -u "$user" -e HOME="/home/$user" "$container" bash -c "
       set -e
       cp /home/$user/.ssh/authorized_keys /tmp/before
-      printf '\n' | script -qec /home/$user/debian-init/keys.sh /dev/null
+      printf '\n' | script -qec /home/$user/debian-setup/keys.sh /dev/null
       cmp -s /tmp/before /home/$user/.ssh/authorized_keys
     " >>"$log" 2>&1; then
       echo "  ok    keys.sh does not ask again for a key it already has"
@@ -186,7 +186,7 @@ for image in "${images[@]}"; do
       git config --global gpg.ssh.allowedSignersFile '~/.ssh/allowed_signers'
       git config --global commit.gpgsign true
       ssh-keygen -q -t ed25519 -N '' -C pasted -f /tmp/pasted
-      script -qec /home/$user/debian-init/claude/signing-key.sh /dev/null \
+      script -qec /home/$user/debian-setup/claude/signing-key.sh /dev/null \
         </tmp/pasted
       test ! -L /home/$user/.ssh/allowed_signers
       cmp -s /tmp/pasted /home/$user/.ssh/claude
@@ -244,7 +244,7 @@ for image in "${images[@]}"; do
   # the way a headless run would, so hardening happens on the way through. No
   # argument, so this is the plain Debian box and not the Claude one.
   #
-  # DEBIAN_INIT_USER is left unset here, unlike the stage above: with no
+  # DEBIAN_SETUP_USER is left unset here, unlike the stage above: with no
   # terminal to ask at, provision.sh falls back to the name it documents, and
   # the account it settles on is the assertion. Between the two stages the suite
   # covers both the knob and the default, and neither account is named claude —
@@ -281,7 +281,7 @@ for image in "${images[@]}"; do
 
   if docker exec \
     -e DEBIAN_FRONTEND=noninteractive \
-    -e DEBIAN_INIT_REPO=/repo \
+    -e DEBIAN_SETUP_REPO=/repo \
     -e SSH_PUBLIC_KEYS="$public_key" \
     "$provision_container" bash /repo/provision.sh >>"$log" 2>&1; then
     if docker exec "$provision_container" id -u "$provisioned_user" >/dev/null 2>&1; then
@@ -313,7 +313,7 @@ for image in "${images[@]}"; do
     fi
 
     if docker exec "$provision_container" \
-      test ! -f /etc/sudoers.d/90-debian-init-provision; then
+      test ! -f /etc/sudoers.d/90-debian-setup-provision; then
       echo "  ok    the temporary sudo grant was withdrawn"
     else
       echo "  FAIL  the temporary sudo grant was withdrawn"
@@ -347,7 +347,7 @@ for image in "${images[@]}"; do
   # the overlay are wanted, machine.sh is not. Worth its own container because
   # what it asserts is an absence, and every earlier stage has already run the
   # half that would fill it in.
-  echo "--- provision.sh with DEBIAN_INIT_SKIP_SETUP=1"
+  echo "--- provision.sh with DEBIAN_SETUP_SKIP_MACHINE=1"
   skip_container="$container-skip"
   start_container "$skip_container" "$image"
 
@@ -365,9 +365,9 @@ for image in "${images[@]}"; do
   # clone cannot go anywhere inside it: /tmp for this stage only.
   if docker exec \
     -e DEBIAN_FRONTEND=noninteractive \
-    -e DEBIAN_INIT_REPO=/repo \
-    -e DEBIAN_INIT_DIR=/tmp/debian-init \
-    -e DEBIAN_INIT_SKIP_SETUP=1 \
+    -e DEBIAN_SETUP_REPO=/repo \
+    -e DEBIAN_SETUP_DIR=/tmp/debian-setup \
+    -e DEBIAN_SETUP_SKIP_MACHINE=1 \
     -e SSH_PUBLIC_KEYS="$public_key" \
     "$skip_container" bash /repo/provision.sh claude >>"$log" 2>&1; then
 
@@ -393,7 +393,7 @@ for image in "${images[@]}"; do
     fi
 
     if docker exec "$skip_container" \
-      test ! -f /etc/sudoers.d/90-debian-init-provision; then
+      test ! -f /etc/sudoers.d/90-debian-setup-provision; then
       echo "  ok    the temporary sudo grant was withdrawn"
     else
       echo "  FAIL  the temporary sudo grant was withdrawn"

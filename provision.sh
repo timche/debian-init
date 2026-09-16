@@ -5,11 +5,11 @@
 # account yet — so the run has to start as root whether or not the account
 # already exists.
 #
-#   curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.sh | bash -s claude
+#   curl -fsSL https://raw.githubusercontent.com/timche/debian-setup/main/provision.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/timche/debian-setup/main/provision.sh | bash -s claude
 #
 # The first leaves a plain Debian box; the second puts Claude Code on top of
-# it. DEBIAN_INIT_SKIP_SETUP=1 drops machine.sh from either, for a machine that
+# it. DEBIAN_SETUP_SKIP_MACHINE=1 drops machine.sh from either, for a machine that
 # already has docker, tailscale and its sshd the way its owner wants them: the
 # account, its keys and the overlay still happen, and nothing touches what is
 # already there.
@@ -28,7 +28,7 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-repo_url="${DEBIAN_INIT_REPO:-https://github.com/timche/debian-init.git}"
+repo_url="${DEBIAN_SETUP_REPO:-https://github.com/timche/debian-setup.git}"
 
 # Asked for below unless the environment or the overlay settles it. The name a
 # provider's own Debian image uses, so it is the least surprising thing to land
@@ -38,13 +38,13 @@ default_user=debian
 # Extra keys to authorize, one per line, for runs with nobody at the keyboard.
 extra_keys="${SSH_PUBLIC_KEYS:-}"
 
-sudoers_drop_in="/etc/sudoers.d/90-debian-init-provision"
+sudoers_drop_in="/etc/sudoers.d/90-debian-setup-provision"
 
 # A machine somebody else built, where the account and the overlay are wanted
 # and machine.sh is not. Read here so that everything machine.sh would have done
 # later — the tailnet key it asks for, the keys.sh that asks again — knows.
 skip_setup=false
-if [ "${DEBIAN_INIT_SKIP_SETUP:-}" = 1 ]; then
+if [ "${DEBIAN_SETUP_SKIP_MACHINE:-}" = 1 ]; then
   skip_setup=true
 fi
 
@@ -95,7 +95,7 @@ usable_name() {
   [[ "$1" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] && [ "$1" != root ]
 }
 
-user="${DEBIAN_INIT_USER:-}"
+user="${DEBIAN_SETUP_USER:-}"
 
 # claude-dotfiles hardcodes the name, so the overlay has only one answer and
 # asking would be a question with a wrong answer available.
@@ -279,7 +279,7 @@ fi
 
 # The repo
 
-target="${DEBIAN_INIT_DIR:-$home/debian-init}"
+target="${DEBIAN_SETUP_DIR:-$home/debian-setup}"
 
 if [ -d "$target/.git" ]; then
   sudo -u "$user" git -C "$target" pull --ff-only
@@ -332,7 +332,7 @@ run_failed=0
 # not inert: harden-ssh.sh would rewrite the sshd drop-in and tailscale.sh would
 # run against a tailnet the machine may already be on.
 if [ "$skip_setup" = true ]; then
-  echo "skipping machine.sh — DEBIAN_INIT_SKIP_SETUP=1"
+  echo "skipping machine.sh — DEBIAN_SETUP_SKIP_MACHINE=1"
 else
   run_as_user "$target/machine.sh" || run_failed=1
 fi

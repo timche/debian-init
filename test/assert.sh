@@ -26,7 +26,7 @@ check() {
 # the runtimes and ~/.claude all come from the private one. A stray dot
 # directory here would be a leak.
 check "no personal config in this repo" \
-  '! find "$HOME/debian-init" \( -name .claude -o -name home \) -not -path "*/.git/*" | grep -q .'
+  '! find "$HOME/debian-setup" \( -name .claude -o -name home \) -not -path "*/.git/*" | grep -q .'
 
 # Nothing in the generic half has an opinion about the shell: the account keeps
 # whatever provision.sh created it with, and no rc file of this repo's comes
@@ -72,19 +72,19 @@ else
   check "no drop-in until there is a key to log in with" \
     '[ ! -f /etc/ssh/sshd_config.d/10-hardening.conf ]'
   check "harden-ssh.sh refuses rather than failing the run" \
-    '"$HOME/debian-init/harden-ssh.sh"'
+    '"$HOME/debian-setup/harden-ssh.sh"'
 fi
 
 # keys.sh prompts for a paste. If it ever stops bailing out without a terminal,
 # machine.sh blocks forever here instead of finishing.
 check "keys.sh exits without a terminal" \
-  '"$HOME/debian-init/keys.sh" < /dev/null'
+  '"$HOME/debian-setup/keys.sh" < /dev/null'
 
 # Same again for tailscale.sh: with no TS_AUTHKEY it asks for one, and would
 # sit on that prompt forever. timeout, because the failure mode is a hang and
 # not an exit status.
 check "tailscale.sh exits without a terminal" \
-  'timeout 30 "$HOME/debian-init/tailscale.sh" < /dev/null'
+  'timeout 30 "$HOME/debian-setup/tailscale.sh" < /dev/null'
 
 if [ "$failures" -gt 0 ]; then
   echo "  $failures check(s) failed"

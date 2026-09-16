@@ -1,12 +1,12 @@
-# Debian Init
+# Debian Setup
 
-[![test](https://github.com/timche/debian-init/actions/workflows/test.yml/badge.svg)](https://github.com/timche/debian-init/actions/workflows/test.yml)
+[![test](https://github.com/timche/debian-setup/actions/workflows/test.yml/badge.svg)](https://github.com/timche/debian-setup/actions/workflows/test.yml)
 
 Provisioning for a Debian VM, and optionally for the one that runs Claude Code. As root, which is how a VM arrives from a provider:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.sh | bash            # a plain Debian box
-curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.sh | bash -s claude  # the same, plus Claude Code
+curl -fsSL https://raw.githubusercontent.com/timche/debian-setup/main/provision.sh | bash            # a plain Debian box
+curl -fsSL https://raw.githubusercontent.com/timche/debian-setup/main/provision.sh | bash -s claude  # the same, plus Claude Code
 ```
 
 Both create the account, clone this repo and run `machine.sh` as that user. The second then runs `claude.sh` on top, and that is the whole of the difference.
@@ -14,12 +14,12 @@ Both create the account, clone this repo and run `machine.sh` as that user. The 
 On a machine that is already built — docker, tailscale and an sshd hardened the way its owner wants them — the same entry point can create the account and go straight to the Claude half:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.sh | DEBIAN_INIT_SKIP_SETUP=1 bash -s claude
+curl -fsSL https://raw.githubusercontent.com/timche/debian-setup/main/provision.sh | DEBIAN_SETUP_SKIP_MACHINE=1 bash -s claude
 ```
 
-`DEBIAN_INIT_SKIP_SETUP=1` leaves `machine.sh` out of either run. The account, the key it asks you for, the password sudo needs and the overlay all still happen; docker, tailscale and sshd are left exactly as they are, where a run without it would rewrite the sshd drop-in and bring tailscale up again. It does not ask for a tailnet key either, since nothing in a skipped run would use one — and if the account ends up with no key at all it says so rather than leaving it to the `keys.sh` that never runs.
+`DEBIAN_SETUP_SKIP_MACHINE=1` leaves `machine.sh` out of either run. The account, the key it asks you for, the password sudo needs and the overlay all still happen; docker, tailscale and sshd are left exactly as they are, where a run without it would rewrite the sshd drop-in and bring tailscale up again. It does not ask for a tailnet key either, since nothing in a skipped run would use one — and if the account ends up with no key at all it says so rather than leaving it to the `keys.sh` that never runs.
 
-The plain run asks what the account should be called, defaulting to `debian`; the Claude one does not ask, because the private dotfiles hardcode `claude`. Either way `DEBIAN_INIT_USER` settles it without a prompt, which is what a run with nobody at the keyboard wants.
+The plain run asks what the account should be called, defaulting to `debian`; the Claude one does not ask, because the private dotfiles hardcode `claude`. Either way `DEBIAN_SETUP_USER` settles it without a prompt, which is what a run with nobody at the keyboard wants.
 
 ## The machine
 

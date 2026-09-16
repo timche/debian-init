@@ -34,7 +34,7 @@ dotfiles="${CLAUDE_DOTFILES_DIR:-$HOME/.claude-dotfiles}"
 gh auth setup-git
 
 # Nobody but the owner can clone it, so a failure here is a message rather than
-# the end of the run: the machine debian-init built still works.
+# the end of the run: the machine debian-setup built still works.
 if [ -d "$dotfiles/.git" ]; then
   git -C "$dotfiles" pull --ff-only ||
     echo "could not update $dotfiles — the installer below runs from it as it" \
