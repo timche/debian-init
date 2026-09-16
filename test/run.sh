@@ -60,6 +60,11 @@ trap 'rm -rf "$keydir"' EXIT
 ssh-keygen -q -t ed25519 -N '' -C provision-test -f "$keydir/key"
 public_key="$(cat "$keydir/key.pub")"
 
+# Root's own key, which the account must not end up with: a box this runs
+# against may be reachable as root by someone the new account is not for.
+ssh-keygen -q -t ed25519 -N '' -C root-test -f "$keydir/root"
+root_public_key="$(cat "$keydir/root.pub")"
+
 failed=0
 
 for image in "${images[@]}"; do
@@ -256,6 +261,8 @@ for image in "${images[@]}"; do
     apt-get update -qq
     apt-get install -y -qq git >/dev/null
     git config --system --add safe.directory '*'
+    install -d -m 0700 /root/.ssh
+    printf '%s\n' '$root_public_key' > /root/.ssh/authorized_keys
   " >>"$log" 2>&1
 
   # A typo must not read as a request for the plain box: the argument is the
@@ -281,6 +288,14 @@ for image in "${images[@]}"; do
       echo "  ok    provision.sh names the account itself when nothing else does"
     else
       echo "  FAIL  provision.sh names the account itself when nothing else does"
+      stage_failed=1
+    fi
+
+    if docker exec "$provision_container" bash -c \
+      "! grep -qF '$root_public_key' /home/$provisioned_user/.ssh/authorized_keys"; then
+      echo "  ok    root's own key is not authorized for the account"
+    else
+      echo "  FAIL  root's own key is not authorized for the account"
       stage_failed=1
     fi
 

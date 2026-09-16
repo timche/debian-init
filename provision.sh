@@ -14,8 +14,8 @@
 # account, its keys and the overlay still happen, and nothing touches what is
 # already there.
 #
-# It asks what the account should be called, creates it, gives it the keys root
-# is already reachable with, and hands everything else to setup.sh running as it
+# It asks what the account should be called, creates it, asks for the public key
+# to authorize, and hands everything else to setup.sh running as it
 # — then to claude.sh, if that is what was asked for. The overlay does not ask:
 # claude-dotfiles hardcodes the name, so a Claude run is always `claude`. Nothing here duplicates either of them: this is
 # the part that cannot be done from inside the account it is creating, which is
@@ -38,7 +38,6 @@ default_user=debian
 # Extra keys to authorize, one per line, for runs with nobody at the keyboard.
 extra_keys="${SSH_PUBLIC_KEYS:-}"
 
-root_keys=/root/.ssh/authorized_keys
 sudoers_drop_in="/etc/sudoers.d/90-debian-init-provision"
 
 # A machine somebody else built, where the account and the overlay are wanted
@@ -193,9 +192,11 @@ authorized_keys="$home/.ssh/authorized_keys"
 staged="$(mktemp)"
 trap 'rm -f "$staged" "$staged.one"' EXIT
 
-# Whatever is already there stays: cloud-init's key, or a previous run's.
+# Whatever is already there stays: cloud-init's key, or a previous run's. Root's
+# are deliberately not among them — whoever is reachable as root on the machine
+# this runs against is not necessarily who the new account is for, and a key
+# that lands without being asked for is one nobody remembers authorizing.
 [ -f "$authorized_keys" ] && cat "$authorized_keys" >>"$staged"
-[ -s "$root_keys" ] && cat "$root_keys" >>"$staged"
 [ -n "$extra_keys" ] && printf '%s\n' "$extra_keys" >>"$staged"
 
 collect_keys() {
@@ -205,11 +206,13 @@ collect_keys() {
 
 collect_keys
 
-# Nothing to inherit and someone is watching, so ask rather than quietly leave
-# the account unreachable.
+# Nothing to go on and someone is watching, so ask rather than quietly leave the
+# account unreachable. A run that already has keys — a second run, or one handed
+# SSH_PUBLIC_KEYS — does not ask, because the answer would be the same one it is
+# already holding.
 if [ ! -s "$staged" ] && [ -n "$prompt" ]; then
   echo
-  echo "No SSH public key found for $user, and root has none to inherit."
+  echo "No SSH public key for $user yet."
   echo "Paste one, e.g. 'ssh-ed25519 AAAA... tim@macbook'."
   echo "Enter on an empty line moves on."
 
