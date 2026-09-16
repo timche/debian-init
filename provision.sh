@@ -9,7 +9,10 @@
 #   curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.sh | bash -s claude
 #
 # The first leaves a plain Debian box; the second puts Claude Code on top of
-# it.
+# it. DEBIAN_INIT_SKIP_SETUP=1 drops setup.sh from either, for a machine that
+# already has docker, tailscale and its sshd the way its owner wants them: the
+# account, its keys and the overlay still happen, and nothing touches what is
+# already there.
 #
 # It asks what the account should be called, creates it, gives it the keys root
 # is already reachable with, and hands everything else to setup.sh running as it
@@ -37,6 +40,14 @@ extra_keys="${SSH_PUBLIC_KEYS:-}"
 
 root_keys=/root/.ssh/authorized_keys
 sudoers_drop_in="/etc/sudoers.d/90-debian-init-provision"
+
+# A machine somebody else built, where the account and the overlay are wanted
+# and setup.sh is not. Read here so that everything setup.sh would have done
+# later — the tailnet key it asks for, the keys.sh that asks again — knows.
+skip_setup=false
+if [ "${DEBIAN_INIT_SKIP_SETUP:-}" = 1 ]; then
+  skip_setup=true
+fi
 
 # The overlay is opt-in, and the argument is the whole of the interface to it.
 # Anything else is refused rather than ignored: a typo that quietly provisions
@@ -226,6 +237,11 @@ if [ -s "$staged" ]; then
   # world-readable in between.
   install -m 0600 -o "$user" -g "$user" "$staged" "$authorized_keys"
   echo "authorized $(wc -l <"$authorized_keys") key(s) for $user"
+elif [ "$skip_setup" = true ]; then
+  # Nothing later will ask: keys.sh is setup.sh's, and this run does not have
+  # it. Whoever is provisioning is still logged in as root, so say so now.
+  echo "no keys authorized for $user — add one before closing this session," \
+       "or the account is unreachable" >&2
 else
   # setup.sh reaches keys.sh later, and harden-ssh.sh holds off until then.
   echo "no keys authorized yet for $user — keys.sh will ask"
@@ -238,7 +254,7 @@ fi
 # question a plain box has before that wait rather than one after it, so the run
 # can be left alone once the pasting is done. tailscale.sh takes the answer out
 # of the environment and does not ask again.
-if [ -z "${TS_AUTHKEY:-}" ] && [ -n "$prompt" ]; then
+if [ -z "${TS_AUTHKEY:-}" ] && [ -n "$prompt" ] && [ "$skip_setup" = false ]; then
   echo
   echo "An auth key puts this machine on the tailnet, which is the second way"
   echo "in that lets the sshd hardening be as strict as it is. Make it tagged,"
@@ -309,15 +325,26 @@ run_as_user() {
 # which nothing else has a copy of. Carry the status to the end instead.
 run_failed=0
 
-run_as_user "$target/setup.sh" || run_failed=1
+# Skipped for a machine somebody else built. setup.sh is idempotent, but it is
+# not inert: harden-ssh.sh would rewrite the sshd drop-in and tailscale.sh would
+# run against a tailnet the machine may already be on.
+if [ "$skip_setup" = true ]; then
+  echo "skipping setup.sh — DEBIAN_INIT_SKIP_SETUP=1"
+else
+  run_as_user "$target/setup.sh" || run_failed=1
+fi
 
 if [ "$overlay" = true ]; then
   run_as_user "$target/claude.sh" || run_failed=1
 fi
 
 # claude comes with the overlay, so asking a generic box for its version only
-# produces a command not found that reads as a failed provision.
-verify="sudo -v && docker ps"
+# produces a command not found that reads as a failed provision. docker likewise
+# belongs to setup.sh, and a skipped run makes no claim about it.
+verify="sudo -v"
+if [ "$skip_setup" = false ]; then
+  verify="$verify && docker ps"
+fi
 if [ "$overlay" = true ]; then
   verify="$verify && claude --version"
 fi

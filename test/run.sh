@@ -328,6 +328,67 @@ for image in "${images[@]}"; do
     stage_failed=1
   fi
 
+  # The same entry point against a machine somebody else built: the account and
+  # the overlay are wanted, setup.sh is not. Worth its own container because
+  # what it asserts is an absence, and every earlier stage has already run the
+  # half that would fill it in.
+  echo "--- provision.sh with DEBIAN_INIT_SKIP_SETUP=1"
+  skip_container="$container-skip"
+  start_container "$skip_container" "$image"
+
+  docker exec -e DEBIAN_FRONTEND=noninteractive "$skip_container" bash -c "
+    set -e
+    apt-get update -qq
+    apt-get install -y -qq git >/dev/null
+    git config --system --add safe.directory '*'
+  " >>"$log" 2>&1
+
+  # The overlay always provisions claude, and run from a worktree this suite
+  # mounts the git common dir read-only at its own absolute path — which is
+  # under /home/claude on the machine this repo is worked on. That leaves the
+  # home directory existing and owned by root before useradd sees it, so the
+  # clone cannot go anywhere inside it: /tmp for this stage only.
+  if docker exec \
+    -e DEBIAN_FRONTEND=noninteractive \
+    -e DEBIAN_INIT_REPO=/repo \
+    -e DEBIAN_INIT_DIR=/tmp/debian-init \
+    -e DEBIAN_INIT_SKIP_SETUP=1 \
+    -e SSH_PUBLIC_KEYS="$public_key" \
+    "$skip_container" bash /repo/provision.sh claude >>"$log" 2>&1; then
+
+    # The overlay names the account, so this is the claude one. gh stands in for
+    # the whole of claude.sh having run, the way it does in the plain stage.
+    if docker exec "$skip_container" bash -c 'id -u claude && command -v gh' \
+      >>"$log" 2>&1; then
+      echo "  ok    the account and the overlay happen without setup.sh"
+    else
+      echo "  FAIL  the account and the overlay happen without setup.sh"
+      stage_failed=1
+    fi
+
+    # btop comes from bootstrap-system.sh and the drop-in from harden-ssh.sh,
+    # which is the half that must not have run: on a real machine it would have
+    # rewritten an sshd config its owner wrote.
+    if docker exec "$skip_container" bash -c \
+      '! command -v btop && test ! -f /etc/ssh/sshd_config.d/10-hardening.conf'; then
+      echo "  ok    setup.sh stayed out of a skipped run"
+    else
+      echo "  FAIL  setup.sh stayed out of a skipped run"
+      stage_failed=1
+    fi
+
+    if docker exec "$skip_container" \
+      test ! -f /etc/sudoers.d/90-debian-init-provision; then
+      echo "  ok    the temporary sudo grant was withdrawn"
+    else
+      echo "  FAIL  the temporary sudo grant was withdrawn"
+      stage_failed=1
+    fi
+  else
+    echo "  FAIL  provision.sh exited non-zero with setup.sh skipped"
+    stage_failed=1
+  fi
+
   if [ "$stage_failed" -ne 0 ]; then
     failed=1
     echo "--- last 40 lines of output"
@@ -338,9 +399,10 @@ for image in "${images[@]}"; do
   fi
 
   if [ "${KEEP:-}" = 1 ]; then
-    echo "  containers kept: $container $provision_container"
+    echo "  containers kept: $container $provision_container $skip_container"
   else
-    docker rm -f "$container" "$provision_container" >/dev/null 2>&1
+    docker rm -f "$container" "$provision_container" "$skip_container" \
+      >/dev/null 2>&1
   fi
 done
 

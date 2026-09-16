@@ -11,6 +11,14 @@ curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.s
 
 Both create the account, clone this repo and run `setup.sh` as that user. The second then runs `claude.sh` on top, and that is the whole of the difference.
 
+On a machine that is already built — docker, tailscale and an sshd hardened the way its owner wants them — the same entry point can create the account and go straight to the Claude half:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/timche/debian-init/main/provision.sh | DEBIAN_INIT_SKIP_SETUP=1 bash -s claude
+```
+
+`DEBIAN_INIT_SKIP_SETUP=1` leaves `setup.sh` out of either run. The account, the keys root is reachable with, the password sudo needs and the overlay all still happen; docker, tailscale and sshd are left exactly as they are, where a run without it would rewrite the sshd drop-in and bring tailscale up again. It does not ask for a tailnet key either, since nothing in a skipped run would use one — and with no key to inherit from root it says so rather than leaving it to the `keys.sh` that never runs.
+
 The plain run asks what the account should be called, defaulting to `debian`; the Claude one does not ask, because the private dotfiles hardcode `claude`. Either way `DEBIAN_INIT_USER` settles it without a prompt, which is what a run with nobody at the keyboard wants.
 
 ## The machine
