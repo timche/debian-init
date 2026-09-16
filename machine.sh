@@ -12,7 +12,7 @@
 set -euo pipefail
 
 if [ "$(id -u)" -eq 0 ]; then
-  echo "setup.sh runs as the user it is setting up, not as root — everything" >&2
+  echo "machine.sh runs as the user it is setting up, not as root — everything" >&2
   echo "here lands in \$HOME. On a bare VM start with provision.sh instead," >&2
   echo "which creates the account and calls this from it." >&2
   exit 1

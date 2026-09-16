@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # The Claude Code overlay: the half of the provisioning that needs a GitHub or
-# an Anthropic account. setup.sh leaves a working Debian box; this is what
+# an Anthropic account. machine.sh leaves a working Debian box; this is what
 # turns that box into the one Claude Code runs on.
 #
 # The second entry point, and the only one that is optional. provision.sh runs
-# it when asked to, and running it by hand against a box setup.sh already built
+# it when asked to, and running it by hand against a box machine.sh already built
 # is the other way in — it is also what you rerun when a token expires.
 #
 # Nothing here is fatal but a fumbled signing-key paste. Everything else it
@@ -106,7 +106,7 @@ else
 fi
 
 # The dotfiles installer is what installs zsh and makes it the login shell, so
-# this line belongs to the overlay rather than to setup.sh.
+# this line belongs to the overlay rather than to machine.sh.
 if [ "$(getent passwd "$USER" | cut -d: -f7)" != "$SHELL" ]; then
   echo "  - Log out and back in for the login shell the dotfiles set."
 fi

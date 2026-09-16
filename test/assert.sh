@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Assertions against a machine that setup.sh has just finished with — the
+# Assertions against a machine that machine.sh has just finished with — the
 # generic half only, with assert-claude.sh covering the overlay. Runs inside
 # the test container as the unprivileged user; see run.sh.
 #
@@ -76,7 +76,7 @@ else
 fi
 
 # keys.sh prompts for a paste. If it ever stops bailing out without a terminal,
-# setup.sh blocks forever here instead of finishing.
+# machine.sh blocks forever here instead of finishing.
 check "keys.sh exits without a terminal" \
   '"$HOME/debian-init/keys.sh" < /dev/null'
 

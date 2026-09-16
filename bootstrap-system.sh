@@ -3,7 +3,7 @@
 # System setup for a bare Debian VM: packages, docker, tailscale. Needs sudo,
 # and only has to run once.
 #
-# The sshd drop-in is not installed here — see harden-ssh.sh, which setup.sh
+# The sshd drop-in is not installed here — see harden-ssh.sh, which machine.sh
 # runs once there are keys to log in with.
 
 set -euo pipefail

@@ -64,7 +64,7 @@ install_authorized_keys() {
   fi
 }
 
-# provision.sh has already asked by the time setup.sh reaches this, on the one
+# provision.sh has already asked by the time machine.sh reaches this, on the one
 # run where there was nothing for it to inherit — so asking again unprompted is
 # asking twice for the same paste. Run by hand it is still how a key is added,
 # which is what the question is for.

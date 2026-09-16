@@ -88,28 +88,28 @@ for image in "${images[@]}"; do
 
   stage_failed=0
 
-  # provision.sh is the entry point, so setup.sh has to turn root away: every
+  # provision.sh is the entry point, so machine.sh has to turn root away: every
   # path in it lands in one user's $HOME, and root running it would scatter
   # them through /root.
-  echo "--- setup.sh as root"
+  echo "--- machine.sh as root"
   if docker exec -e DEBIAN_FRONTEND=noninteractive "$container" \
-    bash "/home/$user/debian-init/setup.sh" >>"$log" 2>&1; then
-    echo "  FAIL  setup.sh refuses to run as root"
+    bash "/home/$user/debian-init/machine.sh" >>"$log" 2>&1; then
+    echo "  FAIL  machine.sh refuses to run as root"
     stage_failed=1
   else
-    echo "  ok    setup.sh refuses to run as root"
+    echo "  ok    machine.sh refuses to run as root"
   fi
 
-  echo "--- setup.sh"
-  if ! run_in_container "$container" setup.sh >>"$log" 2>&1; then
-    echo "  FAIL  setup.sh exited non-zero"
+  echo "--- machine.sh"
+  if ! run_in_container "$container" machine.sh >>"$log" 2>&1; then
+    echo "  FAIL  machine.sh exited non-zero"
     stage_failed=1
   fi
 
   if [ "$stage_failed" -eq 0 ]; then
     run_in_container "$container" test/assert.sh || stage_failed=1
 
-    # The overlay, on top of the box setup.sh just built. No gh is ever logged
+    # The overlay, on top of the box machine.sh just built. No gh is ever logged
     # in here, so it gets as far as its packages and stops — and has to do that
     # with an exit status of zero.
     echo "--- claude.sh"
@@ -129,7 +129,7 @@ for image in "${images[@]}"; do
       stage_failed=1
     fi
 
-    # setup.sh skipped keys.sh for want of a terminal, so drive it under a pty
+    # machine.sh skipped keys.sh for want of a terminal, so drive it under a pty
     # from bsdutils' script(1) — Essential, so it is on every Debian. A
     # throwaway key stands in for the paste, and the empty line after it ends
     # the list.
@@ -148,7 +148,7 @@ for image in "${images[@]}"; do
     fi
 
     # A second run with a key already in place must not go back to the paste
-    # prompt: on a fresh VM provision.sh has just asked for one, and setup.sh
+    # prompt: on a fresh VM provision.sh has just asked for one, and machine.sh
     # reaching keys.sh straight after is what made that two asks for the same
     # key. Enter alone takes the default, and the file has to come out of it
     # unchanged.
@@ -220,7 +220,7 @@ for image in "${images[@]}"; do
       stage_failed=1
     fi
 
-    # setup.sh leaves the box unhardened, since keys.sh cannot prompt without a
+    # machine.sh leaves the box unhardened, since keys.sh cannot prompt without a
     # terminal. Seed a key the way a real run would and the drop-in should land.
     echo "--- harden-ssh.sh"
     docker exec -u "$user" -e HOME="/home/$user" "$container" bash -c "
@@ -240,7 +240,7 @@ for image in "${images[@]}"; do
   fi
 
   # The root entry point, from the other end: a bare image with nothing but
-  # root, where the user setup.sh needs does not exist yet. A key is handed in
+  # root, where the user machine.sh needs does not exist yet. A key is handed in
   # the way a headless run would, so hardening happens on the way through. No
   # argument, so this is the plain Debian box and not the Claude one.
   #
@@ -344,7 +344,7 @@ for image in "${images[@]}"; do
   fi
 
   # The same entry point against a machine somebody else built: the account and
-  # the overlay are wanted, setup.sh is not. Worth its own container because
+  # the overlay are wanted, machine.sh is not. Worth its own container because
   # what it asserts is an absence, and every earlier stage has already run the
   # half that would fill it in.
   echo "--- provision.sh with DEBIAN_INIT_SKIP_SETUP=1"
@@ -375,9 +375,9 @@ for image in "${images[@]}"; do
     # the whole of claude.sh having run, the way it does in the plain stage.
     if docker exec "$skip_container" bash -c 'id -u claude && command -v gh' \
       >>"$log" 2>&1; then
-      echo "  ok    the account and the overlay happen without setup.sh"
+      echo "  ok    the account and the overlay happen without machine.sh"
     else
-      echo "  FAIL  the account and the overlay happen without setup.sh"
+      echo "  FAIL  the account and the overlay happen without machine.sh"
       stage_failed=1
     fi
 
@@ -386,9 +386,9 @@ for image in "${images[@]}"; do
     # rewritten an sshd config its owner wrote.
     if docker exec "$skip_container" bash -c \
       '! command -v btop && test ! -f /etc/ssh/sshd_config.d/10-hardening.conf'; then
-      echo "  ok    setup.sh stayed out of a skipped run"
+      echo "  ok    machine.sh stayed out of a skipped run"
     else
-      echo "  FAIL  setup.sh stayed out of a skipped run"
+      echo "  FAIL  machine.sh stayed out of a skipped run"
       stage_failed=1
     fi
 
@@ -400,7 +400,7 @@ for image in "${images[@]}"; do
       stage_failed=1
     fi
   else
-    echo "  FAIL  provision.sh exited non-zero with setup.sh skipped"
+    echo "  FAIL  provision.sh exited non-zero with machine.sh skipped"
     stage_failed=1
   fi
 

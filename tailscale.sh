@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Put the machine on the tailnet, advertising SSH. A step of its own rather
-# than part of setup.sh: it is the one thing here that wants a credential from
+# than part of machine.sh: it is the one thing here that wants a credential from
 # outside the machine, and it is what you rerun when it was skipped or the node
 # was logged out.
 #
@@ -85,7 +85,7 @@ fi
 # Advertising is all any of this does. Nothing connects until the tailnet
 # policy has an ssh rule for the machine, which is a console job; and that
 # policy, not 10-hardening.conf, is what governs the tailscale path, since sshd
-# never sees it. setup.sh says so at the end of the run.
+# never sees it. machine.sh says so at the end of the run.
 if [ -n "$auth_key" ]; then
   # Passed inline, the key would sit in the process list for the length of the
   # call, which /proc shows to every user on the box. The file: form is in
