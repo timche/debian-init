@@ -27,7 +27,7 @@ The plain run asks what the account should be called, defaulting to `debian`; th
 
 ## The Claude Code overlay
 
-`claude.sh` installs `gh` and `jq`, the two packages that have to exist before the private `claude-dotfiles` can be cloned, logs in to GitHub and to Claude Code, and hands over to the dotfiles for everything after that: the shell and its own packages, the prompt, the runtimes and `~/.claude`. It also installs the commit-signing key and registers it with GitHub. Run it on its own against a box `setup.sh` has already built, and rerun it when a token expires.
+`claude.sh` installs `gh` and `jq`, the two packages that have to exist before the private `claude-dotfiles` can be cloned, logs in to GitHub and to Claude Code, and hands over to the dotfiles — cloned to `~/.claude-dotfiles`, hidden because it is machinery rather than work — for everything after that: the shell and its own packages, the prompt, the runtimes and `~/.claude`. It also installs the commit-signing key and registers it with GitHub. Run it on its own against a box `setup.sh` has already built, and rerun it when a token expires.
 
 The machine runs Claude Code with `bypassPermissions`, which is the point of giving it a VM of its own: there is nothing on it worth guarding Claude from.
 

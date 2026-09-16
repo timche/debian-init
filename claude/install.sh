@@ -22,7 +22,9 @@ if ! gh auth status >/dev/null 2>&1; then
   exit 0
 fi
 
-dotfiles="${CLAUDE_DOTFILES_DIR:-$HOME/claude-dotfiles}"
+# Hidden, because it is machinery rather than work: $HOME holds what is worked
+# on, and this is what makes the account itself. CLAUDE_DOTFILES_DIR moves it.
+dotfiles="${CLAUDE_DOTFILES_DIR:-$HOME/.claude-dotfiles}"
 
 # gh clones a private repo by injecting the token itself, but the git that pulls
 # it afterwards has no idea where to find one. Whether an interactive login
