@@ -231,6 +231,33 @@ else
   echo "no keys authorized yet for $user — keys.sh will ask"
 fi
 
+# The tailnet
+
+# tailscale.sh is the far side of bootstrap-system.sh, which is the long part of
+# the run — a full upgrade, docker and tailscale itself. Asking here puts every
+# question a plain box has before that wait rather than one after it, so the run
+# can be left alone once the pasting is done. tailscale.sh takes the answer out
+# of the environment and does not ask again.
+if [ -z "${TS_AUTHKEY:-}" ] && [ -n "$prompt" ]; then
+  echo
+  echo "An auth key puts this machine on the tailnet, which is the second way"
+  echo "in that lets the sshd hardening be as strict as it is. Make it tagged,"
+  echo "or the node expires off the tailnet when the key does."
+  echo "Enter on an empty line moves on; tailscale.sh falls back to a browser."
+
+  while :; do
+    read -r -p "auth key> " TS_AUTHKEY <"$prompt" || TS_AUTHKEY=""
+    [ -n "$TS_AUTHKEY" ] || break
+
+    [[ "$TS_AUTHKEY" == tskey-* ]] && break
+
+    echo "  that does not look like an auth key; they start with 'tskey-'." >&2
+    TS_AUTHKEY=""
+  done
+
+  export TS_AUTHKEY
+fi
+
 # The repo
 
 target="${DEBIAN_INIT_DIR:-$home/debian-init}"

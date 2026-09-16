@@ -15,7 +15,7 @@ The plain run asks what the account should be called, defaulting to `debian`; th
 
 ## The machine
 
-`setup.sh` installs docker and tailscale, switches unattended-upgrades on, asks for the public keys you connect with, brings the machine up on the tailnet advertising ssh, and then hardens sshd down to keys only, no root, one user. The tailnet is the second way in that lets the hardening be as strict as it is — paste a tailscale auth key when it asks, or set `TS_AUTHKEY` for a run with nobody at the keyboard. Make it a tagged key: a tagged node's key does not expire, and an untagged server drops off the tailnet when its own does. Nothing it leaves behind needs an account anywhere.
+`setup.sh` installs docker and tailscale, switches unattended-upgrades on, asks for the public keys you connect with, brings the machine up on the tailnet advertising ssh, and then hardens sshd down to keys only, no root, one user. The tailnet is the second way in that lets the hardening be as strict as it is — `provision.sh` asks for a tailscale auth key up front, so every question a plain box has comes before the long part of the run and you can leave it to it; `TS_AUTHKEY` answers it for a run with nobody at the keyboard. Make it a tagged key: a tagged node's key does not expire, and an untagged server drops off the tailnet when its own does. Nothing it leaves behind needs an account anywhere.
 
 ## The Claude Code overlay
 

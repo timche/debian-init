@@ -27,6 +27,12 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # su, for a run with nobody watching.
 auth_key="${TS_AUTHKEY:-}"
 
+# Set but empty is provision.sh saying it asked and was told no. Asking again a
+# few minutes later is the same question twice, which is what it is front-loaded
+# to avoid; the browser flow below is where that run is headed anyway.
+asked=false
+[ -n "${TS_AUTHKEY+x}" ] && asked=true
+
 # Before the init check rather than after it, so that a run with nobody at the
 # keyboard is turned away by the reason that will still be true on a real VM.
 if [ -z "$auth_key" ] && [ ! -t 0 ]; then
@@ -51,7 +57,7 @@ if tailscale status >/dev/null 2>&1; then
   exit 0
 fi
 
-if [ -z "$auth_key" ]; then
+if [ -z "$auth_key" ] && [ "$asked" = false ]; then
   cat <<'EOF'
 
 Bringing tailscale up, advertising SSH. Paste an auth key from the admin
