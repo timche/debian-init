@@ -147,6 +147,14 @@ fi
 
 usermod -aG sudo "$user"
 
+# The docker group is bootstrap-system.sh's on a run that reaches it, and at
+# this point in one that will, the group does not exist yet. A skipped machine
+# is one that already has docker, where the group is there and the account is
+# not in it — and the prompt above promises docker either way.
+if getent group docker >/dev/null; then
+  usermod -aG docker "$user"
+fi
+
 home="$(getent passwd "$user" | cut -d: -f6)"
 
 # useradd leaves the account locked, so sudo has nothing to authenticate
@@ -365,8 +373,9 @@ if [ "$cloned_here" = true ] && [ "${DEBIAN_SETUP_KEEP_CLONE:-}" != 1 ]; then
 fi
 
 # claude comes with the overlay, so asking a generic box for its version only
-# produces a command not found that reads as a failed provision. docker likewise
-# belongs to machine.sh, and a skipped run makes no claim about it.
+# produces a command not found that reads as a failed provision. A skipped run
+# puts the account in the docker group but installs no docker, so the daemon
+# and whether it runs stay the owner's rather than something to check here.
 verify="sudo -v"
 if [ "$skip_setup" = false ]; then
   verify="$verify && docker ps"
