@@ -28,13 +28,10 @@ check() {
 }
 
 check "gh installed"    'command -v gh'
-check "zsh installed"   'command -v zsh'
-check "unzip installed" 'command -v unzip'
-check "glow installed"  'command -v glow'
 check "jq installed"    'command -v jq'
 
-# zsh is installed but not switched to: claude-dotfiles owns that, because it
-# owns the .zshrc without which the next login hits zsh-newuser-install. Those
+# zsh is claude-dotfiles' now, package and login shell both, because it owns
+# the .zshrc without which the next login hits zsh-newuser-install. Those
 # dotfiles are the part a container never reaches, so here both stay as they
 # were.
 check "login shell is left alone" 'getent passwd "$USER" | cut -d: -f7 | grep -qv zsh'

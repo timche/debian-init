@@ -47,18 +47,13 @@ sudo chmod a+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
 echo "deb [arch=$architecture signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
   | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
 
-# unzip is what bun's installer extracts with and jq is what the settings.json
-# hooks parse and login.sh patches ~/.claude.json with — neither is obvious
-# from its name. glow renders the markdown claude-dotfiles' preview-markdown
-# skill puts in front of the user; Debian ships the current release, and the
-# version is the same on every machine, so apt owns it rather than mise.
-#
-# zsh is installed but not switched to. Making it the login shell before
-# ~/.zshrc exists drops the next interactive login into zsh-newuser-install,
-# and that file comes from claude-dotfiles — so the shell and its config are
-# turned on together, by the installer that carries both.
+# Only what has to be here before the handover: gh is how the private dotfiles
+# are cloned, and jq is what login.sh patches ~/.claude.json with. The shell,
+# its highlighting and glow went the other way, to the installer that carries
+# the files configuring them; unzip went with bun's installer, which
+# claude-dotfiles no longer uses.
 sudo apt-get update
-sudo apt-get install -y gh glow jq unzip zsh zsh-syntax-highlighting
+sudo apt-get install -y gh jq
 
 "$repo/claude/install.sh"
 
@@ -110,8 +105,8 @@ else
   fi
 fi
 
-# The dotfiles installer is what makes zsh the login shell, so this line belongs
-# to the overlay rather than to setup.sh, which no longer installs zsh at all.
+# The dotfiles installer is what installs zsh and makes it the login shell, so
+# this line belongs to the overlay rather than to setup.sh.
 if [ "$(getent passwd "$USER" | cut -d: -f7)" != "$SHELL" ]; then
   echo "  - Log out and back in for the login shell the dotfiles set."
 fi

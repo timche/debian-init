@@ -6,7 +6,7 @@ Two entry points. `provision.sh` is the one a bare VM has: it runs as root, crea
 
 `setup.sh` refuses root and calls `bootstrap-system.sh`, `keys.sh`, `tailscale.sh`, `harden-ssh.sh` in that order. That is the whole of the machine, and none of it needs an account anywhere.
 
-`claude.sh` is the overlay and the second entry point. It installs the packages the generic half has no caller for — `gh` and its apt source, `zsh`, `zsh-syntax-highlighting`, `unzip`, `jq` — then calls `claude/install.sh`, `claude/login.sh` and `claude/signing-key.sh` in that order: the dotfiles need a token, the token comes from the login, and the signing key needs the `user.email` the dotfiles carry. `claude/register-signing-key.sh` is called by the two of those that end up holding a key to register. Run `claude.sh` by hand against a box `setup.sh` has already built, and rerun it when a token expires.
+`claude.sh` is the overlay and the second entry point. It installs the two packages that have to exist before the private repo can be reached — `gh` and its apt source, and the `jq` `login.sh` uses — then calls `claude/install.sh`, `claude/login.sh` and `claude/signing-key.sh` in that order: the dotfiles need a token, the token comes from the login, and the signing key needs the `user.email` the dotfiles carry. `claude/register-signing-key.sh` is called by the two of those that end up holding a key to register. Run `claude.sh` by hand against a box `setup.sh` has already built, and rerun it when a token expires.
 
 Public, and holds nothing personal — the shell, the runtimes and `~/.claude` come from the private `claude-dotfiles`, which `claude/install.sh` clones once `gh` is logged in. The split is *works before you can authenticate* against *needs an account*.
 
