@@ -24,11 +24,19 @@ fi
 
 dotfiles="${CLAUDE_DOTFILES_DIR:-$HOME/claude-dotfiles}"
 
+# gh clones a private repo by injecting the token itself, but the git that pulls
+# it afterwards has no idea where to find one. Whether an interactive login
+# offered to wire this up varies, and a clone that cannot be updated is worse
+# than no clone: the installer below would run from it and fail on whatever the
+# old version expected. Idempotent, and the same config gh writes itself.
+gh auth setup-git
+
 # Nobody but the owner can clone it, so a failure here is a message rather than
 # the end of the run: the machine debian-init built still works.
 if [ -d "$dotfiles/.git" ]; then
   git -C "$dotfiles" pull --ff-only ||
-    echo "could not update $dotfiles — leaving it as it is" >&2
+    echo "could not update $dotfiles — the installer below runs from it as it" \
+         "is, which is a version behind whatever it should be" >&2
 else
   gh repo clone "${CLAUDE_DOTFILES_REPO:-timche/claude-dotfiles}" "$dotfiles" ||
     echo "could not clone the dotfiles repo — the shell stays on bash" >&2
